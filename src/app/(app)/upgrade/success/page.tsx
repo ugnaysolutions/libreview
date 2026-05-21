@@ -11,10 +11,10 @@ export default function UpgradeSuccessPage() {
       </div>
 
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-foreground">You&apos;re Premium!</h1>
+        <h1 className="text-2xl font-bold text-foreground">Payment Received!</h1>
         <p className="text-sm text-muted-foreground">
-          Your payment was successful. Unlimited practice, mock exams, and full
-          review are now unlocked on your account.
+          Your payment was successful. Premium features will be active on your
+          account within a few seconds.
         </p>
       </div>
 

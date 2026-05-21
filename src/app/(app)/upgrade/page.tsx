@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Zap, Check, CheckCircle2 } from "lucide-react";
 import { FREE_PLAN } from "@/lib/constants";
 import { isPremium } from "@/lib/plan";
-import { CheckoutButton } from "@/components/upgrade/CheckoutButton";
+import { PayMongoButton } from "@/components/upgrade/PayMongoButton";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -94,9 +94,9 @@ export default async function UpgradePage() {
         </div>
       ) : (
         <div className="space-y-3">
-          <CheckoutButton />
+          <PayMongoButton />
           <p className="text-xs text-muted-foreground text-center">
-            Secure payment via Stripe · Cancel anytime
+            GCash · Maya · Credit / Debit Card · Secure via PayMongo
           </p>
           <Link
             href="/dashboard"
