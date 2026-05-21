@@ -1,5 +1,12 @@
-import { Zap, Check } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Zap, Check, CheckCircle2 } from "lucide-react";
 import { FREE_PLAN } from "@/lib/constants";
+import { isPremium } from "@/lib/plan";
+import { CheckoutButton } from "@/components/upgrade/CheckoutButton";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const premiumFeatures = [
   "Unlimited practice sessions per day",
@@ -15,25 +22,41 @@ const premiumFeatures = [
   "Performance benchmarking",
 ];
 
-export default function UpgradePage() {
+export default async function UpgradePage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const premium = await isPremium(user.id);
+
   return (
     <div className="max-w-lg mx-auto px-4 py-10 space-y-8">
       <div className="text-center space-y-2">
         <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-amber-50 mb-2">
           <Zap className="h-7 w-7 text-amber-500" />
         </div>
-        <h1 className="text-2xl font-bold text-foreground">Upgrade to Premium</h1>
+        <h1 className="text-2xl font-bold text-foreground">
+          {premium ? "You're on Premium" : "Upgrade to Premium"}
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Unlock everything and maximize your UPCAT prep.
+          {premium
+            ? "All features are unlocked on your account."
+            : "Unlock everything and maximize your UPCAT prep."}
         </p>
       </div>
 
-      {/* Free vs Premium */}
+      {/* Free vs Premium comparison */}
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div className="rounded-2xl border border-border p-4 space-y-1">
           <p className="font-semibold text-foreground">Free</p>
-          <p className="text-muted-foreground">{FREE_PLAN.dailyPracticeLimit} practice sessions / day</p>
-          <p className="text-muted-foreground">{FREE_PLAN.dailyMockLimit} mock exam / day</p>
+          <p className="text-muted-foreground">
+            {FREE_PLAN.dailyPracticeLimit} practice sessions / day
+          </p>
+          <p className="text-muted-foreground">
+            {FREE_PLAN.dailyMockLimit} mock exam / day
+          </p>
           <p className="text-muted-foreground">UPCAT only</p>
           <p className="text-muted-foreground">Score summary only</p>
         </div>
@@ -58,13 +81,34 @@ export default function UpgradePage() {
         ))}
       </ul>
 
-      {/* Payment placeholder */}
-      <div className="rounded-2xl bg-muted p-5 text-center space-y-2">
-        <p className="font-semibold text-foreground">Payment coming soon</p>
-        <p className="text-xs text-muted-foreground">
-          We&apos;re setting up GCash, Maya, and card payments. Check back soon!
-        </p>
-      </div>
+      {/* CTA */}
+      {premium ? (
+        <div className="rounded-2xl bg-green-50 p-5 flex items-center gap-3">
+          <CheckCircle2 className="h-6 w-6 text-green-500 shrink-0" />
+          <div>
+            <p className="font-semibold text-green-800">Active subscription</p>
+            <p className="text-xs text-green-700 mt-0.5">
+              All premium features are enabled on your account.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <CheckoutButton />
+          <p className="text-xs text-muted-foreground text-center">
+            Secure payment via Stripe · Cancel anytime
+          </p>
+          <Link
+            href="/dashboard"
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "w-full rounded-xl justify-center text-muted-foreground"
+            )}
+          >
+            Maybe later
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
