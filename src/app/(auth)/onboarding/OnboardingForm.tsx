@@ -74,7 +74,7 @@ export function OnboardingForm({
       className="bg-white rounded-2xl border border-border shadow-sm p-6 space-y-5"
     >
       <div className="space-y-2">
-        <Label htmlFor="targetExamDate">Target UPCAT Exam Date</Label>
+        <Label htmlFor="targetExamDate">Target exam date</Label>
         <Input
           id="targetExamDate"
           type="date"
@@ -96,7 +96,7 @@ export function OnboardingForm({
           </SelectTrigger>
           <SelectContent>
             {universities.map((u) => (
-              <SelectItem key={u.id} value={u.id} disabled={!u.is_active}>
+              <SelectItem key={u.id} value={u.id} label={u.name} disabled={!u.is_active}>
                 <span className="flex items-center gap-2">
                   {u.name}
                   {!u.is_active && (

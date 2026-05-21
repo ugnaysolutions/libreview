@@ -1,5 +1,5 @@
 export const APP_NAME = "Libreview";
-export const APP_TAGLINE = "Your free path to UP and beyond.";
+export const APP_TAGLINE = "Your free path to your dream university.";
 
 export const COLORS = {
   primary: "#0D9488",

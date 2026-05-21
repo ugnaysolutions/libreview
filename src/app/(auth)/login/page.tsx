@@ -3,9 +3,9 @@ import { LoginButton } from "./LoginButton";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "Libreview — Free UPCAT Reviewer",
+  title: "Libreview — Free College Entrance Test Reviewer",
   description:
-    "Prepare for the UPCAT with Libreview — a free, no-ads reviewer for Filipino Grade 12 students. Practice by topic, take mock exams, and track your progress.",
+    "Prepare for your college entrance test with Libreview — a free, no-ads reviewer for Filipino Grade 12 students. Practice by topic, take mock exams, and track your progress.",
 };
 
 export default function LoginPage() {
@@ -22,7 +22,7 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-border p-8 space-y-6">
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">
-              Free UPCAT reviewer.
+              Free college entrance test reviewer.
             </p>
             <p className="text-sm text-muted-foreground">No ads. No paywalls.</p>
           </div>
