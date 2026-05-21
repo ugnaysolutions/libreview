@@ -3,13 +3,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { MOCK_EXAM } from "@/lib/constants";
+import { canStartMockExam } from "@/lib/plan";
 
-export async function startMockExamSession() {
+export async function startMockExamSession(): Promise<
+  { error: "DAILY_LIMIT_REACHED" } | void
+> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  if (!(await canStartMockExam(user.id))) {
+    return { error: "DAILY_LIMIT_REACHED" };
+  }
 
   // Get subtests ordered, with their topic IDs
   const { data: subtests } = await supabase

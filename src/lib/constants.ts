@@ -38,6 +38,11 @@ export const MOCK_EXAM = {
 
 export const PRACTICE_SESSION_QUESTION_COUNT = 10;
 
+export const FREE_PLAN = {
+  dailyPracticeLimit: 2,
+  dailyMockLimit: 1,
+} as const;
+
 export const ACCURACY_THRESHOLDS = {
   good: 70,
   average: 50,

@@ -3,18 +3,23 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PRACTICE_SESSION_QUESTION_COUNT } from "@/lib/constants";
+import { canStartPractice } from "@/lib/plan";
 import type { Choice, ReportReason } from "@/lib/supabase/types";
 
 export async function startPracticeSession(
   topicId: string,
   subtestSlug: string,
   topicSlug: string
-) {
+): Promise<{ error: "DAILY_LIMIT_REACHED" } | void> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  if (!(await canStartPractice(user.id))) {
+    return { error: "DAILY_LIMIT_REACHED" };
+  }
 
   const { data: questions } = await supabase
     .from("questions")
