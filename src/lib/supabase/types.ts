@@ -190,6 +190,7 @@ export interface Database {
           time_spent_seconds: number | null;
           started_at: string;
           completed_at: string | null;
+          question_ids: string[];
         };
         Insert: {
           id?: string;
@@ -202,6 +203,7 @@ export interface Database {
           time_limit_seconds?: number | null;
           time_spent_seconds?: number | null;
           completed_at?: string | null;
+          question_ids?: string[];
         };
         Update: {
           status?: ExamStatus;
