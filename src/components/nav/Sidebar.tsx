@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2 } from "lucide-react";
+import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
+import { signOut } from "@/app/actions/auth";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", Icon: Home },
@@ -14,7 +15,19 @@ const NAV_ITEMS = [
   { href: "/progress", label: "Progress", Icon: BarChart2 },
 ];
 
-export function Sidebar() {
+interface User {
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "?";
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+export function Sidebar({ user }: { user: User }) {
   const pathname = usePathname();
 
   return (
@@ -24,6 +37,7 @@ export function Sidebar() {
           {APP_NAME}
         </span>
       </div>
+
       <nav className="flex-1 py-4 px-3">
         <ul className="space-y-1">
           {NAV_ITEMS.map(({ href, label, Icon }) => {
@@ -50,6 +64,42 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
+
+      {/* User footer */}
+      <div className="border-t border-border px-4 py-4 space-y-3">
+        <div className="flex items-center gap-3 min-w-0">
+          {user.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.avatarUrl}
+              alt={user.name}
+              className="h-9 w-9 rounded-full shrink-0 object-cover"
+            />
+          ) : (
+            <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center shrink-0">
+              <span className="text-white text-xs font-bold">
+                {getInitials(user.name)}
+              </span>
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate">
+              {user.name}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+          </div>
+        </div>
+
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+            Sign out
+          </button>
+        </form>
+      </div>
     </aside>
   );
 }

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2 } from "lucide-react";
+import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { signOut } from "@/app/actions/auth";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", Icon: Home },
@@ -13,11 +14,58 @@ const NAV_ITEMS = [
   { href: "/progress", label: "Progress", Icon: BarChart2 },
 ];
 
-export function BottomNav() {
+interface User {
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "?";
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+export function BottomNav({ user }: { user: User }) {
   const pathname = usePathname();
+  const firstName = user.name.split(" ")[0];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-border md:hidden">
+      {/* User identity bar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border/60">
+        <div className="flex items-center gap-2 min-w-0">
+          {user.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.avatarUrl}
+              alt={user.name}
+              className="h-7 w-7 rounded-full shrink-0 object-cover"
+            />
+          ) : (
+            <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center shrink-0">
+              <span className="text-white text-[10px] font-bold">
+                {getInitials(user.name)}
+              </span>
+            </div>
+          )}
+          <span className="text-xs font-semibold text-foreground truncate">
+            {firstName}
+          </span>
+        </div>
+
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+          >
+            <LogOut className="h-3.5 w-3.5" aria-hidden />
+            Sign out
+          </button>
+        </form>
+      </div>
+
+      {/* Tab row */}
       <ul className="flex items-center justify-around h-16 px-2">
         {NAV_ITEMS.map(({ href, label, Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
