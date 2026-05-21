@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { PublishToggle } from "@/components/admin/PublishToggle";
 import { DeleteResourceButton } from "@/components/admin/DeleteResourceButton";
+import { AutoSubmitSelect } from "@/components/admin/AutoSubmitSelect";
 
 export default async function AdminResourcesPage({
   searchParams,
@@ -65,12 +66,9 @@ export default async function AdminResourcesPage({
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <form method="get" action="/admin/resources">
-          <select
+          <AutoSubmitSelect
             name="subtest"
             defaultValue={subtest ?? ""}
-            onChange={(e) =>
-              (e.currentTarget.form as HTMLFormElement).requestSubmit()
-            }
             className="rounded-xl border border-border bg-background px-3 py-1.5 text-sm focus:outline-none"
           >
             <option value="">All subtests</option>
@@ -79,18 +77,15 @@ export default async function AdminResourcesPage({
                 {s.name}
               </option>
             ))}
-          </select>
+          </AutoSubmitSelect>
         </form>
 
         {currentSubtest && (currentTopics as { id: string }[]).length > 0 && (
           <form method="get" action="/admin/resources">
             <input type="hidden" name="subtest" value={currentSubtest} />
-            <select
+            <AutoSubmitSelect
               name="topic"
               defaultValue={topic ?? ""}
-              onChange={(e) =>
-                (e.currentTarget.form as HTMLFormElement).requestSubmit()
-              }
               className="rounded-xl border border-border bg-background px-3 py-1.5 text-sm focus:outline-none"
             >
               <option value="">All topics</option>
@@ -99,7 +94,7 @@ export default async function AdminResourcesPage({
                   {t.name}
                 </option>
               ))}
-            </select>
+            </AutoSubmitSelect>
           </form>
         )}
       </div>

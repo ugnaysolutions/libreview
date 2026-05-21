@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { QuestionTable } from "@/components/admin/QuestionTable";
+import { AutoSubmitSelect } from "@/components/admin/AutoSubmitSelect";
 
 export default async function AdminQuestionsPage({
   searchParams,
@@ -115,12 +116,9 @@ export default async function AdminQuestionsPage({
           {status && status !== "all" && (
             <input type="hidden" name="status" value={status} />
           )}
-          <select
+          <AutoSubmitSelect
             name="subtest"
             defaultValue={subtest ?? ""}
-            onChange={(e) =>
-              (e.currentTarget.form as HTMLFormElement).requestSubmit()
-            }
             className="rounded-xl border border-border bg-background px-3 py-1.5 text-sm focus:outline-none"
           >
             <option value="">All subtests</option>
@@ -129,7 +127,7 @@ export default async function AdminQuestionsPage({
                 {s.name}
               </option>
             ))}
-          </select>
+          </AutoSubmitSelect>
         </form>
 
         {/* Topic filter (only when subtest is selected) */}
@@ -139,12 +137,9 @@ export default async function AdminQuestionsPage({
               <input type="hidden" name="status" value={status} />
             )}
             <input type="hidden" name="subtest" value={currentSubtest} />
-            <select
+            <AutoSubmitSelect
               name="topic"
               defaultValue={topic ?? ""}
-              onChange={(e) =>
-                (e.currentTarget.form as HTMLFormElement).requestSubmit()
-              }
               className="rounded-xl border border-border bg-background px-3 py-1.5 text-sm focus:outline-none"
             >
               <option value="">All topics</option>
@@ -153,7 +148,7 @@ export default async function AdminQuestionsPage({
                   {t.name}
                 </option>
               ))}
-            </select>
+            </AutoSubmitSelect>
           </form>
         )}
       </div>
