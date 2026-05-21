@@ -36,7 +36,7 @@ export const MOCK_EXAM = {
   totalItems: 60,
 } as const;
 
-export const PRACTICE_SESSION_QUESTION_COUNT = 15;
+export const PRACTICE_SESSION_QUESTION_COUNT = 10;
 
 export const ACCURACY_THRESHOLDS = {
   good: 70,
