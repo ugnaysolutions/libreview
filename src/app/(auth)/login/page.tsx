@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { LoginButton } from "./LoginButton";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
+
+export const metadata: Metadata = {
+  title: "Libreview — Free UPCAT Reviewer",
+  description:
+    "Prepare for the UPCAT with Libreview — a free, no-ads reviewer for Filipino Grade 12 students. Practice by topic, take mock exams, and track your progress.",
+};
 
 export default function LoginPage() {
   return (
