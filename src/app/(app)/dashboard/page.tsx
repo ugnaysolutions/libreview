@@ -164,10 +164,7 @@ export default async function DashboardPage() {
           </div>
           <Link
             href="/mock-exam"
-            className={cn(
-              buttonVariants({ size: "lg" }),
-              "w-full bg-white text-primary hover:bg-white/90 font-bold rounded-xl justify-center"
-            )}
+            className="w-full bg-white text-primary hover:bg-white/90 active:bg-white/80 font-bold rounded-xl h-11 px-8 inline-flex items-center justify-center text-sm transition-colors"
           >
             Take Mock Exam
           </Link>

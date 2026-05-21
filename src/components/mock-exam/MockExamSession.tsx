@@ -72,6 +72,7 @@ export function MockExamSession({
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [answers, setAnswers] = useState<Set<string>>(new Set(answeredIds));
+  const [selectedChoices, setSelectedChoices] = useState<Record<string, Choice>>({});
   const [saving, setSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState(() => {
     const elapsed = Math.floor(
@@ -162,6 +163,7 @@ export function MockExamSession({
     if (isAnswered || saving) return;
     setSaving(true);
     setAnswers((prev) => new Set(prev).add(question.id));
+    setSelectedChoices((prev) => ({ ...prev, [question.id]: choice }));
     await saveAnswer(sessionId, question.id, choice, question.correct_choice);
     setSaving(false);
   }
@@ -318,31 +320,38 @@ export function MockExamSession({
 
         {/* Choices */}
         <div className="space-y-2">
-          {CHOICES.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => handleSelectChoice(key)}
-              disabled={isAnswered || saving}
-              className={cn(
-                "w-full text-left rounded-xl border p-4 transition-all flex items-start gap-3",
-                !isAnswered &&
-                  "border-border bg-card hover:border-primary/60 hover:bg-primary/5 cursor-pointer",
-                isAnswered && "cursor-default",
-                isAnswered && "border-border bg-card opacity-60"
-              )}
-            >
-              <span
+          {CHOICES.map(({ key, label }) => {
+            const isSelected = selectedChoices[question.id] === key;
+            return (
+              <button
+                key={key}
+                onClick={() => handleSelectChoice(key)}
+                disabled={isAnswered || saving}
                 className={cn(
-                  "shrink-0 w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center bg-muted text-muted-foreground"
+                  "w-full text-left rounded-xl border p-4 transition-all flex items-start gap-3",
+                  !isAnswered &&
+                    "border-border bg-card hover:border-primary/60 hover:bg-primary/5 cursor-pointer",
+                  isAnswered && "cursor-default",
+                  isAnswered && !isSelected && "border-border bg-card opacity-40",
+                  isAnswered && isSelected && "border-primary bg-primary/10"
                 )}
               >
-                {label}
-              </span>
-              <span className="text-sm leading-snug text-foreground">
-                {choiceText[key]}
-              </span>
-            </button>
-          ))}
+                <span
+                  className={cn(
+                    "shrink-0 w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center",
+                    isAnswered && isSelected
+                      ? "bg-primary text-white"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {label}
+                </span>
+                <span className="text-sm leading-snug text-foreground">
+                  {choiceText[key]}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {isAnswered && (
