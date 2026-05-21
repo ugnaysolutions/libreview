@@ -2,12 +2,13 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { MOCK_EXAM } from "@/lib/constants";
+import { SCHOOL_EXAMS } from "@/lib/constants";
 import { canStartMockExam } from "@/lib/plan";
+import type { ExamType } from "@/lib/constants";
 
-export async function startMockExamSession(): Promise<
-  { error: "DAILY_LIMIT_REACHED" } | void
-> {
+export async function startMockExamSession(
+  examType: ExamType = "upcat"
+): Promise<{ error: "DAILY_LIMIT_REACHED" } | void> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,10 +19,13 @@ export async function startMockExamSession(): Promise<
     return { error: "DAILY_LIMIT_REACHED" };
   }
 
-  // Get subtests ordered, with their topic IDs
+  const examConfig = SCHOOL_EXAMS[examType];
+
+  // Get subtests for this exam type, ordered
   const { data: subtests } = await supabase
     .from("subtests")
     .select("id, slug, topics(id)")
+    .eq("exam_type", examType)
     .order("display_order");
 
   if (!subtests || subtests.length === 0) throw new Error("No subtests found");
@@ -30,8 +34,8 @@ export async function startMockExamSession(): Promise<
   const subtestQuestions = await Promise.all(
     subtests.map(async (subtest) => {
       const itemCount =
-        MOCK_EXAM.subtestItemCounts[
-          subtest.slug as keyof typeof MOCK_EXAM.subtestItemCounts
+        examConfig.subtestItemCounts[
+          subtest.slug as keyof typeof examConfig.subtestItemCounts
         ];
       if (!itemCount) return [];
 
@@ -65,7 +69,7 @@ export async function startMockExamSession(): Promise<
       status: "in_progress",
       total_questions: allQuestionIds.length,
       question_ids: allQuestionIds,
-      time_limit_seconds: MOCK_EXAM.totalTimeSeconds,
+      time_limit_seconds: examConfig.totalTimeSeconds,
     })
     .select("id")
     .single();

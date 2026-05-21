@@ -7,12 +7,14 @@ import { DailyLimitModal } from "@/components/ui/DailyLimitModal";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import type { ExamType } from "@/lib/constants";
 
 interface Props {
   existingSessionId?: string;
+  examType?: ExamType;
 }
 
-export function StartMockExamButton({ existingSessionId }: Props) {
+export function StartMockExamButton({ existingSessionId, examType = "upcat" }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
@@ -24,7 +26,7 @@ export function StartMockExamButton({ existingSessionId }: Props) {
       return;
     }
     try {
-      const result = await startMockExamSession();
+      const result = await startMockExamSession(examType);
       if (result?.error === "DAILY_LIMIT_REACHED") {
         setShowLimitModal(true);
       }

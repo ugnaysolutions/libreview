@@ -36,6 +36,63 @@ export const MOCK_EXAM = {
   totalItems: 60,
 } as const;
 
+export const SCHOOL_EXAMS = {
+  upcat: {
+    name: "UPCAT",
+    fullName: "UP College Admission Test",
+    description: "All 4 subtests · 60 items · 60 minutes",
+    totalTimeSeconds: 3600,
+    totalItems: 60,
+    subtestItemCounts: {
+      "language-proficiency": 20,
+      "reading-comprehension": 15,
+      science: 15,
+      mathematics: 10,
+    },
+  },
+  acet: {
+    name: "ACET",
+    fullName: "Ateneo College Entrance Test",
+    description: "Language · Reading · Science · Math · 60 items · 60 minutes",
+    totalTimeSeconds: 3600,
+    totalItems: 60,
+    subtestItemCounts: {
+      "acet-language-proficiency": 20,
+      "acet-reading-comprehension": 15,
+      "acet-science": 15,
+      "acet-mathematics": 10,
+    },
+  },
+  dlsu: {
+    name: "DLSUCET",
+    fullName: "De La Salle University College Entrance Test",
+    description: "Math-heavy · 60 items · 60 minutes",
+    totalTimeSeconds: 3600,
+    totalItems: 60,
+    subtestItemCounts: {
+      "dlsu-language-proficiency": 15,
+      "dlsu-reading-comprehension": 10,
+      "dlsu-mathematics": 25,
+      "dlsu-science": 10,
+    },
+  },
+  ust: {
+    name: "USTET",
+    fullName: "University of Santo Tomas Entrance Test",
+    description: "Science-heavy · 60 items · 60 minutes",
+    totalTimeSeconds: 3600,
+    totalItems: 60,
+    subtestItemCounts: {
+      "ust-language-proficiency": 15,
+      "ust-reading-comprehension": 15,
+      "ust-science": 15,
+      "ust-mathematics": 15,
+    },
+  },
+} as const;
+
+export type ExamType = keyof typeof SCHOOL_EXAMS;
+
 export const PRACTICE_SESSION_QUESTION_COUNT = 10;
 
 export const FREE_PLAN = {
