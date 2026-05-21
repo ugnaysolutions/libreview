@@ -11,6 +11,26 @@ Known breaking changes already encountered:
 - `Button` from shadcn/ui uses `@base-ui/react/button` — **`asChild` prop does not exist**. Use `buttonVariants()` with a `<Link>` instead: `<Link className={cn(buttonVariants({ variant, size }), "...")} href="...">`.
 - `Select.onValueChange` receives `string | null`. Guard with `val && setValue(...)` or `String(val ?? "")`.
 
+## Git workflow
+
+**After every meaningful unit of work, commit and push.** Never leave work uncommitted at the end of a session. This ensures the project can always be reverted to a known-good state.
+
+```bash
+git add <files>
+git commit -m "type: short description
+
+Longer explanation if needed.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git push origin master
+```
+
+Commit message types: `feat` (new feature), `fix` (bug fix), `chore` (config/tooling), `refactor`, `style` (design/CSS only).
+
+Keep commits scoped to a single logical change — one phase, one feature, one fix. Do not batch unrelated changes into one commit.
+
+Remote: `https://github.com/ugnaysolutions/libreview`
+
 ## Commands
 
 ```bash
