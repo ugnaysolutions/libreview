@@ -12,7 +12,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
@@ -42,6 +41,7 @@ export function OnboardingForm({
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [selectedUniversityId, setSelectedUniversityId] = useState("");
 
   const {
     register,
@@ -49,6 +49,9 @@ export function OnboardingForm({
     setValue,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  const selectedUniversityName =
+    universities.find((u) => u.id === selectedUniversityId)?.name ?? "";
 
   async function onSubmit(values: FormValues) {
     setSaving(true);
@@ -89,10 +92,16 @@ export function OnboardingForm({
       <div className="space-y-2">
         <Label>Target University</Label>
         <Select
-          onValueChange={(val) => setValue("targetUniversityId", String(val ?? ""), { shouldValidate: true })}
+          onValueChange={(val) => {
+            const id = String(val ?? "");
+            setSelectedUniversityId(id);
+            setValue("targetUniversityId", id, { shouldValidate: true });
+          }}
         >
           <SelectTrigger className="rounded-xl">
-            <SelectValue placeholder="Select a university" />
+            <span className={selectedUniversityName ? "text-sm" : "text-sm text-muted-foreground"}>
+              {selectedUniversityName || "Select a university"}
+            </span>
           </SelectTrigger>
           <SelectContent>
             {universities.map((u) => (
