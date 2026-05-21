@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Lock, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AccuracyRing } from "@/components/ui/AccuracyRing";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { isPremium } from "@/lib/plan";
 import type { Choice } from "@/lib/supabase/types";
 
 function formatDuration(seconds: number | null) {
@@ -26,6 +27,8 @@ export default async function MockExamResultsPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const premium = await isPremium(user.id);
 
   const { data: session } = await supabase
     .from("exam_sessions")
@@ -195,103 +198,156 @@ export default async function MockExamResultsPage({
       {/* Per-question review grouped by subtest */}
       <section className="space-y-6">
         <h2 className="text-base font-semibold text-foreground">Review</h2>
-        {subtestList.map((s) => {
-          const sQuestions = questionsBySubtest.get(s.id) ?? [];
-          if (sQuestions.length === 0) return null;
-          return (
-            <div key={s.id} className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                {s.name}
-              </h3>
-              {sQuestions.map((q) => {
-                const answer = aMap.get(q.id);
-                const chosen = answer?.chosen_choice as Choice | null | undefined;
-                const isCorrect = answer?.is_correct;
-                const choiceText: Record<Choice, string> = {
-                  a: q.choice_a,
-                  b: q.choice_b,
-                  c: q.choice_c,
-                  d: q.choice_d,
-                };
 
-                return (
-                  <Card
-                    key={q.id}
-                    className="rounded-2xl border-border shadow-sm"
-                  >
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-start gap-2">
-                        {isCorrect ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                        )}
-                        <p className="text-sm font-medium text-foreground leading-snug">
-                          {q.question_text}
-                        </p>
-                      </div>
+        {!premium ? (
+          <div className="relative rounded-2xl overflow-hidden">
+            {/* Blurred preview of a question card */}
+            <div className="blur-sm pointer-events-none select-none space-y-3" aria-hidden>
+              <div className="rounded-2xl border border-border bg-white p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <XCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-sm font-medium text-foreground">
+                    Which of the following best describes the relationship between speed and velocity?
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  {["a", "b", "c", "d"].map((k) => (
+                    <div key={k} className={cn("flex items-start gap-2 text-sm px-3 py-2 rounded-lg", k === "b" && "bg-green-50 text-green-800 font-medium", k === "a" && "bg-red-50 text-red-700", !["a","b"].includes(k) && "text-muted-foreground")}>
+                      <span className="font-semibold uppercase shrink-0">{k}.</span>
+                      <span className="flex-1">Sample answer choice {k.toUpperCase()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-border bg-white p-4 space-y-2">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                  <p className="text-sm font-medium text-foreground">
+                    A student mixes two substances and observes a color change. What type of reaction occurred?
+                  </p>
+                </div>
+              </div>
+            </div>
 
-                      {q.image_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={q.image_url}
-                          alt=""
-                          className="w-full rounded-lg object-contain max-h-32"
-                          loading="lazy"
-                        />
-                      )}
+            {/* Lock overlay */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-white/70 backdrop-blur-[2px] rounded-2xl">
+              <div className="h-14 w-14 rounded-2xl bg-amber-50 flex items-center justify-center">
+                <Lock className="h-6 w-6 text-amber-500" />
+              </div>
+              <div className="text-center px-4">
+                <p className="font-bold text-foreground">Premium feature</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Upgrade to review each question with correct answers and explanations.
+                </p>
+              </div>
+              <Link
+                href="/upgrade"
+                className={cn(buttonVariants({ size: "sm" }), "rounded-xl gap-1.5")}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                Upgrade to Premium
+              </Link>
+            </div>
+          </div>
+        ) : (
+          subtestList.map((s) => {
+            const sQuestions = questionsBySubtest.get(s.id) ?? [];
+            if (sQuestions.length === 0) return null;
+            return (
+              <div key={s.id} className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  {s.name}
+                </h3>
+                {sQuestions.map((q) => {
+                  const answer = aMap.get(q.id);
+                  const chosen = answer?.chosen_choice as Choice | null | undefined;
+                  const isCorrect = answer?.is_correct;
+                  const choiceText: Record<Choice, string> = {
+                    a: q.choice_a,
+                    b: q.choice_b,
+                    c: q.choice_c,
+                    d: q.choice_d,
+                  };
 
-                      <div className="space-y-1">
-                        {(["a", "b", "c", "d"] as Choice[]).map((key) => {
-                          const isChosenKey = chosen === key;
-                          const isCorrectKey = q.correct_choice === key;
-                          return (
-                            <div
-                              key={key}
-                              className={cn(
-                                "flex items-start gap-2 text-sm px-3 py-2 rounded-lg",
-                                isCorrectKey &&
-                                  "bg-green-50 text-green-800 font-medium",
-                                isChosenKey &&
-                                  !isCorrectKey &&
-                                  "bg-red-50 text-red-700",
-                                !isCorrectKey &&
-                                  !isChosenKey &&
-                                  "text-muted-foreground"
-                              )}
-                            >
-                              <span className="font-semibold uppercase shrink-0">
-                                {key}.
-                              </span>
-                              <span className="flex-1">{choiceText[key]}</span>
-                              {isCorrectKey && (
-                                <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
-                              )}
-                              {isChosenKey && !isCorrectKey && (
-                                <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {q.explanation && (
-                        <div className="bg-muted/50 rounded-xl p-3">
-                          <p className="text-xs font-semibold text-muted-foreground mb-1">
-                            Explanation
-                          </p>
-                          <p className="text-xs text-foreground/80 leading-relaxed">
-                            {q.explanation}
+                  return (
+                    <Card
+                      key={q.id}
+                      className="rounded-2xl border-border shadow-sm"
+                    >
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-start gap-2">
+                          {isCorrect ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                          )}
+                          <p className="text-sm font-medium text-foreground leading-snug">
+                            {q.question_text}
                           </p>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          );
-        })}
+
+                        {q.image_url && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={q.image_url}
+                            alt=""
+                            className="w-full rounded-lg object-contain max-h-32"
+                            loading="lazy"
+                          />
+                        )}
+
+                        <div className="space-y-1">
+                          {(["a", "b", "c", "d"] as Choice[]).map((key) => {
+                            const isChosenKey = chosen === key;
+                            const isCorrectKey = q.correct_choice === key;
+                            return (
+                              <div
+                                key={key}
+                                className={cn(
+                                  "flex items-start gap-2 text-sm px-3 py-2 rounded-lg",
+                                  isCorrectKey &&
+                                    "bg-green-50 text-green-800 font-medium",
+                                  isChosenKey &&
+                                    !isCorrectKey &&
+                                    "bg-red-50 text-red-700",
+                                  !isCorrectKey &&
+                                    !isChosenKey &&
+                                    "text-muted-foreground"
+                                )}
+                              >
+                                <span className="font-semibold uppercase shrink-0">
+                                  {key}.
+                                </span>
+                                <span className="flex-1">{choiceText[key]}</span>
+                                {isCorrectKey && (
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
+                                )}
+                                {isChosenKey && !isCorrectKey && (
+                                  <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {q.explanation && (
+                          <div className="bg-muted/50 rounded-xl p-3">
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">
+                              Explanation
+                            </p>
+                            <p className="text-xs text-foreground/80 leading-relaxed">
+                              {q.explanation}
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            );
+          })
+        )}
       </section>
     </div>
   );
