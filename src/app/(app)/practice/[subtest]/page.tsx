@@ -9,6 +9,7 @@ import { isPremium } from "@/lib/plan";
 import { PREMIUM_SUBTESTS } from "@/lib/constants";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { TopicBadge, getBadgeLevel } from "@/components/ui/TopicBadge";
 
 export default async function SubtestPage({
   params,
@@ -108,6 +109,7 @@ export default async function SubtestPage({
           const p = progressMap.get(topic.id);
           const accuracy = p ? Math.round(Number(p.accuracy_percentage)) : 0;
           const hasStarted = p && p.total_attempts > 0;
+          const badgeLevel = getBadgeLevel(accuracy, !!hasStarted);
 
           return (
             <Link
@@ -118,9 +120,12 @@ export default async function SubtestPage({
                 <CardContent className="p-4 flex items-center gap-4">
                   <AccuracyRing accuracy={accuracy} size={52} strokeWidth={5} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">
-                      {topic.name}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {topic.name}
+                      </p>
+                      {badgeLevel && <TopicBadge level={badgeLevel} size={14} />}
+                    </div>
                     {topic.description && (
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                         {topic.description}

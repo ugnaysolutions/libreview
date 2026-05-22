@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AccuracyRing } from "@/components/ui/AccuracyRing";
 import { cn } from "@/lib/utils";
+import { TopicBadge, getBadgeLevel, badgeLabel, type BadgeLevel } from "@/components/ui/TopicBadge";
 
 const SUBTEST_META: Record<
   string,
@@ -84,6 +85,21 @@ export default async function ProgressPage() {
   const streak = profile?.streak_count ?? 0;
 
   const progressMap = new Map(progress.map((p) => [p.topic_id, p]));
+
+  // Build achievements list from existing progress (no extra DB query needed)
+  type Achievement = { topicName: string; subtestName: string; accuracy: number; level: BadgeLevel };
+  const LEVEL_ORDER: Record<BadgeLevel, number> = { gold: 0, silver: 1, bronze: 2 };
+  const achievements: Achievement[] = [];
+  for (const subtest of subtests) {
+    for (const topic of (subtest.topics as unknown as { id: string; name: string; display_order: number | null }[])) {
+      const p = progressMap.get(topic.id);
+      if (!p || p.total_attempts === 0) continue;
+      const accuracy = Math.round(Number(p.accuracy_percentage));
+      const level = getBadgeLevel(accuracy, true);
+      if (level) achievements.push({ topicName: topic.name, subtestName: subtest.name, accuracy, level });
+    }
+  }
+  achievements.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level] || b.accuracy - a.accuracy);
 
   // Build 30-day calendar grid
   const sessionDates = new Set(
@@ -273,9 +289,15 @@ export default async function ProgressPage() {
                           strokeWidth={4}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground truncate">
-                            {topic.name}
-                          </p>
+                          <div className="flex items-center gap-1">
+                            <p className="text-xs font-medium text-foreground truncate">
+                              {topic.name}
+                            </p>
+                            {(() => {
+                              const lvl = getBadgeLevel(accuracy, !!(p && p.total_attempts > 0));
+                              return lvl ? <TopicBadge level={lvl} size={12} /> : null;
+                            })()}
+                          </div>
                           {p && p.total_attempts > 0 ? (
                             <p className="text-[11px] text-muted-foreground">
                               {p.total_attempts} answered · {lastPracticed}
@@ -300,6 +322,40 @@ export default async function ProgressPage() {
           );
         })}
       </section>
+
+      {/* ── Achievements ────────────────────────────────────────── */}
+      {achievements.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold text-foreground">
+            Achievements{" "}
+            <span className="text-muted-foreground font-normal text-sm">
+              ({achievements.length})
+            </span>
+          </h2>
+          <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
+                {achievements.map((a, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3">
+                    <TopicBadge level={a.level} size={20} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">
+                        {a.topicName}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {a.subtestName} · {badgeLabel(a.level)}
+                      </p>
+                    </div>
+                    <p className="text-xs font-semibold text-foreground shrink-0">
+                      {a.accuracy}%
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* ── Session history ─────────────────────────────────────── */}
       <section className="space-y-3">
