@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, XCircle, Clock, Lock, Zap, Bookmark } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Lock, Zap, Bookmark, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AccuracyRing } from "@/components/ui/AccuracyRing";
 import { buttonVariants } from "@/components/ui/button";
@@ -122,6 +122,29 @@ export default async function MockExamResultsPage({
       ? "Keep it up!"
       : "Keep practicing!";
 
+  // Percentile rank vs all completed mock exams (premium only, needs ≥5 data points)
+  let percentileRank: number | null = null;
+  if (premium) {
+    const [totalRes, belowRes] = await Promise.all([
+      supabase
+        .from("exam_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("session_type", "mock_exam")
+        .eq("status", "completed"),
+      supabase
+        .from("exam_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("session_type", "mock_exam")
+        .eq("status", "completed")
+        .lt("correct_count", correctCount),
+    ]);
+    const totalCount = totalRes.count ?? 0;
+    const belowCount = belowRes.count ?? 0;
+    if (totalCount >= 5) {
+      percentileRank = Math.round((belowCount / totalCount) * 100);
+    }
+  }
+
   // Group questions by subtest for the review section
   const questionsBySubtest = new Map<string, typeof questions>();
   for (const q of questions) {
@@ -156,6 +179,12 @@ export default async function MockExamResultsPage({
           <Clock className="h-4 w-4" />
           <span>Time: {formatDuration(session.time_spent_seconds)}</span>
         </div>
+        {percentileRank !== null && (
+          <div className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-sm font-semibold px-4 py-2 rounded-full">
+            <TrendingUp className="h-4 w-4" />
+            Better than {percentileRank}% of students
+          </div>
+        )}
       </div>
 
       {/* Per-subtest breakdown */}
