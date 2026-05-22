@@ -37,7 +37,7 @@ export default async function MockExamSessionPage({
     supabase
       .from("questions")
       .select(
-        "id, question_text, image_url, choice_a, choice_b, choice_c, choice_d, correct_choice, topic_id, topics(subtest_id, subtests(id, name, display_order))"
+        "id, question_text, image_url, choice_a, choice_b, choice_c, choice_d, correct_choice, topic_id, passage_id, passages(id, content, image_url), topics(subtest_id, subtests(id, name, display_order))"
       )
       .in("id", questionIds),
     supabase
@@ -58,6 +58,11 @@ export default async function MockExamSessionPage({
         subtest_id: string;
         subtests: { id: string; name: string; display_order: number | null };
       } | null;
+      const passage = q.passages as unknown as {
+        id: string;
+        content: string | null;
+        image_url: string | null;
+      } | null;
       return {
         id: q.id,
         question_text: q.question_text,
@@ -68,6 +73,8 @@ export default async function MockExamSessionPage({
         choice_d: q.choice_d,
         correct_choice: q.correct_choice as "a" | "b" | "c" | "d",
         topic_id: q.topic_id,
+        passage_id: q.passage_id ?? null,
+        passage: passage ?? null,
         subtest_id: topic?.subtest_id ?? "",
         subtest_name: topic?.subtests?.name ?? "",
       };

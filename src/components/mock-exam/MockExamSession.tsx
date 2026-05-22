@@ -34,6 +34,8 @@ export interface MockExamQuestion {
   choice_d: string;
   correct_choice: Choice;
   topic_id: string;
+  passage_id: string | null;
+  passage: { id: string; content: string | null; image_url: string | null } | null;
   subtest_id: string;
   subtest_name: string;
 }
@@ -299,6 +301,26 @@ export function MockExamSession({
             </p>
           )}
         </div>
+
+        {/* Passage panel (shown above question when applicable) */}
+        {question.passage && (
+          <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-3">
+            {question.passage.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={question.passage.image_url}
+                alt="Stimulus"
+                className="w-full rounded-xl object-contain max-h-64"
+                loading="lazy"
+              />
+            )}
+            {question.passage.content && (
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                {question.passage.content}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Question */}
         <Card className="rounded-2xl border-border shadow-sm">

@@ -37,7 +37,20 @@ export async function startPracticeSession(
     0,
     Math.min(PRACTICE_SESSION_QUESTION_COUNT, shuffled.length)
   );
-  const questionIds = selected.map((q: { id: string }) => q.id);
+  const sampledIds = selected.map((q: { id: string }) => q.id);
+
+  // Fetch passage_id for sampled questions and group passage questions consecutively
+  const { data: passageInfo } = await supabase
+    .from("questions")
+    .select("id, passage_id")
+    .in("id", sampledIds);
+
+  const grouped = new Map<string, string[]>();
+  for (const q of passageInfo ?? []) {
+    const key = q.passage_id ?? `solo-${q.id}`;
+    grouped.set(key, [...(grouped.get(key) ?? []), q.id]);
+  }
+  const questionIds = [...grouped.values()].flat();
 
   const { data: session, error } = await supabase
     .from("exam_sessions")

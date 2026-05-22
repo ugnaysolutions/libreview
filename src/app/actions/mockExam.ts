@@ -65,8 +65,27 @@ export async function startMockExamSession(
     })
   );
 
-  const allQuestionIds = subtestQuestions.flat();
-  if (allQuestionIds.length === 0) throw new Error("No questions available");
+  const sampledIds = subtestQuestions.flat();
+  if (sampledIds.length === 0) throw new Error("No questions available");
+
+  // Group passage questions consecutively within the flat list
+  const { data: passageInfo } = await supabase
+    .from("questions")
+    .select("id, passage_id")
+    .in("id", sampledIds);
+
+  // Build a position map to keep subtest ordering stable
+  const posMap = new Map(sampledIds.map((id, i) => [id, i]));
+  const grouped = new Map<string, string[]>();
+  for (const q of passageInfo ?? []) {
+    const key = q.passage_id ?? `solo-${q.id}`;
+    grouped.set(key, [...(grouped.get(key) ?? []), q.id]);
+  }
+  // Sort groups by the first question's original position to preserve subtest order
+  const sortedGroups = [...grouped.values()].sort(
+    (a, b) => (posMap.get(a[0]) ?? 0) - (posMap.get(b[0]) ?? 0)
+  );
+  const allQuestionIds = sortedGroups.flat();
 
   const { data: session, error } = await supabase
     .from("exam_sessions")

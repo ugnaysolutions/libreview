@@ -42,7 +42,7 @@ export default async function SessionPage({
     supabase
       .from("questions")
       .select(
-        "id, question_text, image_url, choice_a, choice_b, choice_c, choice_d, correct_choice"
+        "id, question_text, image_url, choice_a, choice_b, choice_c, choice_d, correct_choice, passage_id, passages(id, content, image_url)"
       )
       .in("id", questionIds),
     supabase
@@ -53,10 +53,30 @@ export default async function SessionPage({
 
   if (!questionsRes.data || questionsRes.data.length === 0) notFound();
 
-  // Preserve the order from question_ids
+  // Preserve the order from question_ids and map passage relation
   const qMap = new Map(questionsRes.data.map((q) => [q.id, q]));
-  const questions = questionIds
-    .map((id) => qMap.get(id))
+  const questions: PracticeQuestion[] = questionIds
+    .map((id) => {
+      const q = qMap.get(id);
+      if (!q) return null;
+      const passage = q.passages as unknown as {
+        id: string;
+        content: string | null;
+        image_url: string | null;
+      } | null;
+      return {
+        id: q.id,
+        question_text: q.question_text,
+        image_url: q.image_url,
+        choice_a: q.choice_a,
+        choice_b: q.choice_b,
+        choice_c: q.choice_c,
+        choice_d: q.choice_d,
+        correct_choice: q.correct_choice,
+        passage_id: q.passage_id ?? null,
+        passage: passage ?? null,
+      };
+    })
     .filter(Boolean) as PracticeQuestion[];
 
   const answeredIds = (answersRes.data ?? []).map((a) => a.question_id);

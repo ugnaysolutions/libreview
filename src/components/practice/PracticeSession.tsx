@@ -7,7 +7,7 @@ import { ReportDialog } from "./ReportDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Flag, Loader2 } from "lucide-react";
+import { Flag, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Choice } from "@/lib/supabase/types";
 
 export interface PracticeQuestion {
@@ -19,6 +19,8 @@ export interface PracticeQuestion {
   choice_c: string;
   choice_d: string;
   correct_choice: Choice;
+  passage_id: string | null;
+  passage: { id: string; content: string | null; image_url: string | null } | null;
 }
 
 interface Props {
@@ -50,14 +52,16 @@ export function PracticeSession({
   const [localAnswers, setLocalAnswers] = useState<Set<string>>(
     new Set(answeredIds)
   );
-  const [selectedChoice, setSelectedChoice] = useState<Choice | null>(null);
+  // Per-question choice map so selected answer is preserved when navigating back
+  const [selectedChoices, setSelectedChoices] = useState<Record<string, Choice>>({});
   const [saving, setSaving] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
   const question = questions[currentIndex];
+  const isFirst = currentIndex === 0;
   const isLast = currentIndex === questions.length - 1;
-  const isAnswered = localAnswers.has(question.id) || selectedChoice !== null;
+  const isAnswered = localAnswers.has(question.id) || question.id in selectedChoices;
 
   const choiceText: Record<Choice, string> = {
     a: question.choice_a,
@@ -67,13 +71,17 @@ export function PracticeSession({
   };
 
   async function handleSelectChoice(choice: Choice) {
-    if (selectedChoice !== null || localAnswers.has(question.id)) return;
+    if (question.id in selectedChoices || localAnswers.has(question.id)) return;
 
-    setSelectedChoice(choice);
+    setSelectedChoices((prev) => ({ ...prev, [question.id]: choice }));
     setSaving(true);
     await saveAnswer(sessionId, question.id, choice, question.correct_choice);
     setLocalAnswers((prev) => new Set(prev).add(question.id));
     setSaving(false);
+  }
+
+  function handlePrev() {
+    if (!isFirst) setCurrentIndex((i) => i - 1);
   }
 
   async function handleNext() {
@@ -86,12 +94,12 @@ export function PracticeSession({
         `/practice/${subtestSlug}/${topicSlug}/session/results?session=${sessionId}`
       );
     } else {
-      setSelectedChoice(null);
       setCurrentIndex((i) => i + 1);
     }
   }
 
-  const showResult = selectedChoice !== null || localAnswers.has(question.id);
+  const showResult = localAnswers.has(question.id) || question.id in selectedChoices;
+  const selectedChoice = selectedChoices[question.id] ?? null;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
@@ -118,6 +126,26 @@ export function PracticeSession({
           }}
         />
       </div>
+
+      {/* Passage panel (shown above question when applicable) */}
+      {question.passage && (
+        <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-3">
+          {question.passage.image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={question.passage.image_url}
+              alt="Stimulus"
+              className="w-full rounded-xl object-contain max-h-64"
+              loading="lazy"
+            />
+          )}
+          {question.passage.content && (
+            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+              {question.passage.content}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Question */}
       <Card className="rounded-2xl border-border shadow-sm">
@@ -213,25 +241,44 @@ export function PracticeSession({
         })}
       </div>
 
-      {/* Next / Finish */}
-      <button
-        onClick={handleNext}
-        disabled={!isAnswered || saving || completing}
-        className={cn(
-          buttonVariants({ size: "lg" }),
-          "w-full rounded-xl font-bold justify-center gap-2",
-          (!isAnswered || saving || completing) && "opacity-50 cursor-not-allowed"
+      {/* Navigation */}
+      <div className="flex gap-3">
+        {!isFirst && (
+          <button
+            onClick={handlePrev}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "lg" }),
+              "rounded-xl gap-1.5 shrink-0"
+            )}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </button>
         )}
-      >
-        {completing && <Loader2 className="h-4 w-4 animate-spin" />}
-        {completing
-          ? "Saving results…"
-          : saving
-          ? "Saving…"
-          : isLast
-          ? "Finish"
-          : "Next Question"}
-      </button>
+        <button
+          onClick={handleNext}
+          disabled={!isAnswered || saving || completing}
+          className={cn(
+            buttonVariants({ size: "lg" }),
+            "flex-1 rounded-xl font-bold justify-center gap-2",
+            (!isAnswered || saving || completing) && "opacity-50 cursor-not-allowed"
+          )}
+        >
+          {completing && <Loader2 className="h-4 w-4 animate-spin" />}
+          {completing
+            ? "Saving results…"
+            : saving
+            ? "Saving…"
+            : isLast
+            ? "Finish"
+            : (
+              <>
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+        </button>
+      </div>
 
       <ReportDialog
         questionId={question.id}
