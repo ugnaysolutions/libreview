@@ -141,7 +141,7 @@ export default async function DashboardPage() {
           Hi, {displayName}! 👋
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Ready to review for the UPCAT?
+          Ready to review for your dream U?
         </p>
       </div>
 
