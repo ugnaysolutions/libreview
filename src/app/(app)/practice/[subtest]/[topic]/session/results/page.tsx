@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Choice } from "@/lib/supabase/types";
 import { BookmarkButton } from "@/components/ui/BookmarkButton";
+import { ShareScoreButton } from "@/components/ui/ShareScoreButton";
 
 export default async function ResultsPage({
   params,
@@ -79,6 +80,10 @@ export default async function ResultsPage({
   const correctCount = session.correct_count ?? 0;
   const total = session.total_questions;
   const scorePercent = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+  const topicLabel = topicSlug
+    .split("-")
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
   const scoreColor =
     scorePercent >= 70
       ? "#22C55E"
@@ -133,6 +138,12 @@ export default async function ResultsPage({
           Back to Topics
         </Link>
       </div>
+      <ShareScoreButton
+        score={scorePercent}
+        correct={correctCount}
+        total={total}
+        label={topicLabel}
+      />
       <Link
         href="/bookmarks"
         className="flex items-center justify-center gap-1.5 text-xs text-primary font-medium"

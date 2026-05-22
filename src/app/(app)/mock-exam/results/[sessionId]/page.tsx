@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { isPremium } from "@/lib/plan";
 import type { Choice } from "@/lib/supabase/types";
 import { BookmarkButton } from "@/components/ui/BookmarkButton";
+import { ShareScoreButton } from "@/components/ui/ShareScoreButton";
 
 function formatDuration(seconds: number | null) {
   if (!seconds) return "—";
@@ -232,6 +233,12 @@ export default async function MockExamResultsPage({
           Dashboard
         </Link>
       </div>
+      <ShareScoreButton
+        score={scorePercent}
+        correct={correctCount}
+        total={total}
+        label="Mock Exam"
+      />
       {premium && (
         <Link
           href="/bookmarks"
