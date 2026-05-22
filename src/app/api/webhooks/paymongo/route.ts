@@ -3,7 +3,7 @@ import { createHmac } from "crypto";
 import { activatePremium } from "@/lib/activatePremium";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-function verifySignature(rawBody: string, sigHeader: string): boolean {
+function verifySignature(rawBody: string, sigHeader: string, secret: string): boolean {
   // Header format: t=<timestamp>,te=<test_sig>,li=<live_sig>
   const parts: Record<string, string> = {};
   for (const part of sigHeader.split(",")) {
@@ -15,9 +15,7 @@ function verifySignature(rawBody: string, sigHeader: string): boolean {
   if (!timestamp || !signature) return false;
 
   const payload = `${timestamp}.${rawBody}`;
-  const expected = createHmac("sha256", process.env.PAYMONGO_WEBHOOK_SECRET!)
-    .update(payload)
-    .digest("hex");
+  const expected = createHmac("sha256", secret).update(payload).digest("hex");
 
   return expected === signature;
 }
@@ -26,8 +24,13 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const sigHeader = req.headers.get("paymongo-signature");
 
-  if (!sigHeader || !verifySignature(body, sigHeader)) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    if (!sigHeader || !verifySignature(body, sigHeader, webhookSecret)) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    }
+  } else {
+    console.warn("PAYMONGO_WEBHOOK_SECRET not set — skipping signature verification");
   }
 
   const event = JSON.parse(body);

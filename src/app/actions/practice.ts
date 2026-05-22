@@ -23,34 +23,41 @@ export async function startPracticeSession(
 
   const { data: questions } = await supabase
     .from("questions")
-    .select("id")
+    .select("id, passage_id, passage_order")
     .eq("topic_id", topicId)
     .eq("status", "approved")
-    .limit(50);
+    .limit(200);
 
   if (!questions || questions.length === 0) {
     throw new Error("No questions available for this topic");
   }
 
-  const shuffled = [...questions].sort(() => Math.random() - 0.5);
-  const selected = shuffled.slice(
-    0,
-    Math.min(PRACTICE_SESSION_QUESTION_COUNT, shuffled.length)
-  );
-  const sampledIds = selected.map((q: { id: string }) => q.id);
-
-  // Fetch passage_id for sampled questions and group passage questions consecutively
-  const { data: passageInfo } = await supabase
-    .from("questions")
-    .select("id, passage_id")
-    .in("id", sampledIds);
-
-  const grouped = new Map<string, string[]>();
-  for (const q of passageInfo ?? []) {
+  // Group questions by passage; sort each group by passage_order ASC (parent = 1, children = 2+)
+  type Q = { id: string; passage_id: string | null; passage_order: number | null };
+  const groupMap = new Map<string, Q[]>();
+  for (const q of questions as Q[]) {
     const key = q.passage_id ?? `solo-${q.id}`;
-    grouped.set(key, [...(grouped.get(key) ?? []), q.id]);
+    const g = groupMap.get(key) ?? [];
+    g.push(q);
+    groupMap.set(key, g);
   }
-  const questionIds = [...grouped.values()].flat();
+  for (const g of groupMap.values()) {
+    g.sort((a, b) => (a.passage_order ?? 0) - (b.passage_order ?? 0));
+  }
+
+  // Shuffle groups, then greedily fill to session limit
+  // Full group preferred; if only 1 slot remains, include the parent only (never children alone)
+  const groups = [...groupMap.values()].sort(() => Math.random() - 0.5);
+  const questionIds: string[] = [];
+  for (const group of groups) {
+    if (questionIds.length >= PRACTICE_SESSION_QUESTION_COUNT) break;
+    const remaining = PRACTICE_SESSION_QUESTION_COUNT - questionIds.length;
+    if (group.length <= remaining) {
+      questionIds.push(...group.map((q) => q.id));
+    } else if (remaining >= 1) {
+      questionIds.push(group[0].id); // parent only as fallback
+    }
+  }
 
   const { data: session, error } = await supabase
     .from("exam_sessions")

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { BottomNav } from "@/components/nav/BottomNav";
+import { isPremium } from "@/lib/plan";
 
 export default async function AppLayout({
   children,
@@ -20,6 +21,8 @@ export default async function AppLayout({
         .single()
     : { data: null };
 
+  const premium = user ? await isPremium(user.id) : false;
+
   const currentUser = {
     name: profile?.full_name ?? user?.email ?? "User",
     email: user?.email ?? "",
@@ -28,9 +31,9 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar user={currentUser} />
+      <Sidebar user={currentUser} isPremium={premium} />
       <main className="flex-1 min-w-0 pb-28 md:pb-0">{children}</main>
-      <BottomNav user={currentUser} />
+      <BottomNav user={currentUser} isPremium={premium} />
     </div>
   );
 }

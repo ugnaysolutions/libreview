@@ -49,10 +49,12 @@ The residents applauded, relieved that their years of petitioning had finally yi
   console.log("Inserted passage:", passage.id);
 
   // 3. Insert 2–3 questions linked to the passage
+  // passage_order: 1 = parent (shown first), 2+ = children
   const questions = [
     {
       topic_id: topic.id,
       passage_id: passage.id,
+      passage_order: 1,
       question_text: "What was the main announcement made by the barangay captain?",
       choice_a: "A new school would be built",
       choice_b: "A new health center would be constructed",
@@ -66,6 +68,7 @@ The residents applauded, relieved that their years of petitioning had finally yi
     {
       topic_id: topic.id,
       passage_id: passage.id,
+      passage_order: 2,
       question_text: "What can be inferred about the residents' earlier actions?",
       choice_a: "They had organized protests",
       choice_b: "They had submitted formal petitions",

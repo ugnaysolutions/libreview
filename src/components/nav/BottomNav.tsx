@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut } from "lucide-react";
+import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/app/actions/auth";
 
@@ -26,7 +26,7 @@ function getInitials(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function BottomNav({ user }: { user: User }) {
+export function BottomNav({ user, isPremium }: { user: User; isPremium?: boolean }) {
   const pathname = usePathname();
   const firstName = user.name.split(" ")[0];
 
@@ -54,15 +54,26 @@ export function BottomNav({ user }: { user: User }) {
           </span>
         </div>
 
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
-          >
-            <LogOut className="h-3.5 w-3.5" aria-hidden />
-            Sign out
-          </button>
-        </form>
+        <div className="flex items-center gap-2">
+          {!isPremium && (
+            <Link
+              href="/upgrade"
+              className="flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg"
+            >
+              <Zap className="h-3 w-3" aria-hidden />
+              Upgrade
+            </Link>
+          )}
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+            >
+              <LogOut className="h-3.5 w-3.5" aria-hidden />
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
 
       {/* Tab row */}

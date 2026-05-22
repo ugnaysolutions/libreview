@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut } from "lucide-react";
+import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
 import { signOut } from "@/app/actions/auth";
@@ -19,6 +19,7 @@ interface User {
   name: string;
   email: string;
   avatarUrl: string | null;
+  isPremium?: boolean;
 }
 
 function getInitials(name: string) {
@@ -27,7 +28,7 @@ function getInitials(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function Sidebar({ user }: { user: User }) {
+export function Sidebar({ user, isPremium }: { user: User; isPremium?: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -89,6 +90,16 @@ export function Sidebar({ user }: { user: User }) {
             <p className="text-xs text-muted-foreground truncate">{user.email}</p>
           </div>
         </div>
+
+        {!isPremium && (
+          <Link
+            href="/upgrade"
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-sm font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors"
+          >
+            <Zap className="h-4 w-4 shrink-0" aria-hidden />
+            Upgrade to Premium
+          </Link>
+        )}
 
         <form action={signOut}>
           <button

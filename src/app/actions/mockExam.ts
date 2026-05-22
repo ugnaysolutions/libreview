@@ -51,41 +51,44 @@ export async function startMockExamSession(
 
       const { data: questions } = await supabase
         .from("questions")
-        .select("id")
+        .select("id, passage_id, passage_order")
         .in("topic_id", topicIds)
         .eq("status", "approved")
         .limit(itemCount * 5);
 
       if (!questions || questions.length === 0) return [];
 
-      const shuffled = [...questions].sort(() => Math.random() - 0.5);
-      return shuffled
-        .slice(0, Math.min(itemCount, shuffled.length))
-        .map((q: { id: string }) => q.id);
+      // Group by passage; sort each group by passage_order ASC (parent = 1, children = 2+)
+      type Q = { id: string; passage_id: string | null; passage_order: number | null };
+      const groupMap = new Map<string, Q[]>();
+      for (const q of questions as Q[]) {
+        const key = q.passage_id ?? `solo-${q.id}`;
+        const g = groupMap.get(key) ?? [];
+        g.push(q);
+        groupMap.set(key, g);
+      }
+      for (const g of groupMap.values()) {
+        g.sort((a, b) => (a.passage_order ?? 0) - (b.passage_order ?? 0));
+      }
+
+      // Shuffle groups, greedily fill to itemCount; never include children without parent
+      const groups = [...groupMap.values()].sort(() => Math.random() - 0.5);
+      const ids: string[] = [];
+      for (const group of groups) {
+        if (ids.length >= itemCount) break;
+        const remaining = itemCount - ids.length;
+        if (group.length <= remaining) {
+          ids.push(...group.map((q) => q.id));
+        } else if (remaining >= 1) {
+          ids.push(group[0].id); // parent only as fallback
+        }
+      }
+      return ids;
     })
   );
 
-  const sampledIds = subtestQuestions.flat();
-  if (sampledIds.length === 0) throw new Error("No questions available");
-
-  // Group passage questions consecutively within the flat list
-  const { data: passageInfo } = await supabase
-    .from("questions")
-    .select("id, passage_id")
-    .in("id", sampledIds);
-
-  // Build a position map to keep subtest ordering stable
-  const posMap = new Map(sampledIds.map((id, i) => [id, i]));
-  const grouped = new Map<string, string[]>();
-  for (const q of passageInfo ?? []) {
-    const key = q.passage_id ?? `solo-${q.id}`;
-    grouped.set(key, [...(grouped.get(key) ?? []), q.id]);
-  }
-  // Sort groups by the first question's original position to preserve subtest order
-  const sortedGroups = [...grouped.values()].sort(
-    (a, b) => (posMap.get(a[0]) ?? 0) - (posMap.get(b[0]) ?? 0)
-  );
-  const allQuestionIds = sortedGroups.flat();
+  const allQuestionIds = subtestQuestions.flat();
+  if (allQuestionIds.length === 0) throw new Error("No questions available");
 
   const { data: session, error } = await supabase
     .from("exam_sessions")
