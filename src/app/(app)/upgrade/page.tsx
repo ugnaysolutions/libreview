@@ -14,6 +14,7 @@ const premiumFeatures = [
   "Unlimited mock exams per day",
   "Full wrong-answer review with explanations",
   "ACET, DLSUCET & USTET mock exams",
+  "Reasoning subject (Logic, Numerical, Verbal & more)",
   "Advanced progress analytics",
   "Adaptive weak-topic drills",
   "Timed practice mode",
@@ -31,6 +32,27 @@ export default async function UpgradePage() {
 
   const premium = await isPremium(user.id);
 
+  let planType: string | null = null;
+  let planExpiresAt: string | null = null;
+
+  if (premium) {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("plan_type, plan_expires_at")
+      .eq("id", user.id)
+      .single();
+    planType = profile?.plan_type ?? "monthly";
+    planExpiresAt = profile?.plan_expires_at ?? null;
+  }
+
+  const expiryLabel = planExpiresAt
+    ? new Date(planExpiresAt).toLocaleDateString("en-PH", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
+
   return (
     <div className="max-w-lg mx-auto px-4 py-10 space-y-8">
       <div className="text-center space-y-2">
@@ -43,7 +65,7 @@ export default async function UpgradePage() {
         <p className="text-sm text-muted-foreground">
           {premium
             ? "All features are unlocked on your account."
-            : "Unlock everything and maximize your UPCAT prep."}
+            : "Unlock everything and maximize your college entrance test prep."}
         </p>
       </div>
 
@@ -83,18 +105,58 @@ export default async function UpgradePage() {
 
       {/* CTA */}
       {premium ? (
-        <div className="rounded-2xl bg-green-50 p-5 flex items-center gap-3">
-          <CheckCircle2 className="h-6 w-6 text-green-500 shrink-0" />
-          <div>
-            <p className="font-semibold text-green-800">Active subscription</p>
-            <p className="text-xs text-green-700 mt-0.5">
-              All premium features are enabled on your account.
-            </p>
+        <div className="space-y-4">
+          <div className="rounded-2xl bg-green-50 p-5 flex items-center gap-3">
+            <CheckCircle2 className="h-6 w-6 text-green-500 shrink-0" />
+            <div>
+              <p className="font-semibold text-green-800">Active subscription</p>
+              <p className="text-xs text-green-700 mt-0.5">
+                {planType === "annual" ? "Annual plan" : "Monthly plan"}
+                {expiryLabel ? ` · Renews by ${expiryLabel}` : ""}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs text-center text-muted-foreground font-medium">Renew early to extend your access</p>
+            <div className="grid grid-cols-2 gap-3">
+              <PayMongoButton plan="monthly" label="Renew Monthly" />
+              <PayMongoButton plan="annual" label="Renew Annual" />
+            </div>
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          <PayMongoButton />
+        <div className="space-y-4">
+          {/* Pricing cards */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Monthly */}
+            <div className="rounded-2xl border border-border p-5 space-y-3 flex flex-col">
+              <div>
+                <p className="font-semibold text-foreground text-sm">Monthly</p>
+                <p className="text-2xl font-bold text-foreground mt-1">₱149</p>
+                <p className="text-xs text-muted-foreground">per month</p>
+              </div>
+              <div className="flex-1" />
+              <PayMongoButton plan="monthly" />
+            </div>
+
+            {/* Annual — Best Value */}
+            <div className="rounded-2xl border-2 border-primary p-5 space-y-3 flex flex-col relative overflow-hidden">
+              <div className="absolute top-2.5 right-2.5">
+                <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  Best Value
+                </span>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground text-sm">Annual</p>
+                <p className="text-2xl font-bold text-foreground mt-1">₱999</p>
+                <p className="text-xs text-muted-foreground">per year · ~₱83/mo</p>
+                <p className="text-xs text-primary font-medium mt-0.5">Save 44%</p>
+              </div>
+              <div className="flex-1" />
+              <PayMongoButton plan="annual" />
+            </div>
+          </div>
+
           <p className="text-xs text-muted-foreground text-center">
             GCash · Maya · Credit / Debit Card · Secure via PayMongo
           </p>

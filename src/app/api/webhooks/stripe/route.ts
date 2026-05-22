@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
 
       const subscriptionId = session.subscription as string;
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      const expiresAt = new Date(subscription.current_period_end * 1000);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const expiresAt = new Date((subscription as any).current_period_end * 1000);
       const priceData = subscription.items.data[0]?.price;
 
       await activatePremium(userId, expiresAt);
@@ -52,7 +53,8 @@ export async function POST(req: NextRequest) {
 
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription;
-      const expiresAt = new Date(subscription.current_period_end * 1000);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const expiresAt = new Date((subscription as any).current_period_end * 1000);
 
       const { data } = await supabase
         .from("subscriptions")

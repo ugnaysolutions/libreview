@@ -1,12 +1,17 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function activatePremium(userId: string, expiresAt: Date) {
+export async function activatePremium(
+  userId: string,
+  expiresAt: Date,
+  planType: "monthly" | "annual" = "monthly"
+) {
   const supabase = createAdminClient();
   await supabase
     .from("user_profiles")
     .update({
       plan: "premium",
       plan_expires_at: expiresAt.toISOString(),
+      plan_type: planType,
     })
     .eq("id", userId);
 }

@@ -5,7 +5,12 @@ import { Loader2 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function PayMongoButton() {
+interface Props {
+  plan: "monthly" | "annual";
+  label?: string;
+}
+
+export function PayMongoButton({ plan, label }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,7 +18,11 @@ export function PayMongoButton() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/checkout/paymongo", { method: "POST" });
+      const res = await fetch("/api/checkout/paymongo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
@@ -27,8 +36,11 @@ export function PayMongoButton() {
     }
   }
 
+  const defaultLabel =
+    plan === "annual" ? "Get Annual – ₱999/yr" : "Get Monthly – ₱149/mo";
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <button
         onClick={handleClick}
         disabled={loading}
@@ -39,7 +51,7 @@ export function PayMongoButton() {
         )}
       >
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        {loading ? "Redirecting to payment…" : "Pay with GCash / Maya / Card"}
+        {loading ? "Redirecting…" : (label ?? defaultLabel)}
       </button>
       {error && <p className="text-xs text-red-500 text-center">{error}</p>}
     </div>

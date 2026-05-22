@@ -3,8 +3,6 @@ import { createHmac } from "crypto";
 import { activatePremium } from "@/lib/activatePremium";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const PREMIUM_DAYS = 30;
-
 function verifySignature(rawBody: string, sigHeader: string): boolean {
   // Header format: t=<timestamp>,te=<test_sig>,li=<live_sig>
   const parts: Record<string, string> = {};
@@ -39,11 +37,14 @@ export async function POST(req: NextRequest) {
     const session = event?.data?.attributes?.data;
     const attrs = session?.attributes;
     const userId: string | undefined = attrs?.metadata?.user_id;
+    const planType: "monthly" | "annual" =
+      attrs?.metadata?.plan_type === "annual" ? "annual" : "monthly";
 
     if (!userId) {
       return NextResponse.json({ error: "Missing user_id in metadata" }, { status: 400 });
     }
 
+    const durationDays = planType === "annual" ? 365 : 30;
     const supabase = createAdminClient();
 
     // Extend from current expiry if still active, otherwise start from now
@@ -61,9 +62,9 @@ export async function POST(req: NextRequest) {
         ? new Date(profile.plan_expires_at)
         : now;
 
-    const expiresAt = new Date(base.getTime() + PREMIUM_DAYS * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(base.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
-    await activatePremium(userId, expiresAt);
+    await activatePremium(userId, expiresAt, planType);
 
     const paymentId: string =
       attrs?.payments?.[0]?.id ?? session?.id ?? "unknown";
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
       amount_cents: amountCents,
       currency: "PHP",
       expires_at: expiresAt.toISOString(),
+      plan_type: planType,
     });
   }
 

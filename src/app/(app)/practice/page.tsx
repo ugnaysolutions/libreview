@@ -1,15 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, BookMarked, FlaskConical, Calculator, ChevronRight } from "lucide-react";
+import { BookOpen, BookMarked, FlaskConical, Calculator, Brain, ChevronRight, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { AccuracyRing } from "@/components/ui/AccuracyRing";
+import { isPremium } from "@/lib/plan";
+import { PREMIUM_SUBTESTS } from "@/lib/constants";
 
 const SUBTEST_META: Record<string, { icon: React.ReactNode }> = {
   "language-proficiency": { icon: <BookOpen className="h-5 w-5 text-violet-500" /> },
   "reading-comprehension": { icon: <BookMarked className="h-5 w-5 text-blue-500" /> },
   science: { icon: <FlaskConical className="h-5 w-5 text-green-500" /> },
   mathematics: { icon: <Calculator className="h-5 w-5 text-amber-500" /> },
+  reasoning: { icon: <Brain className="h-5 w-5 text-purple-500" /> },
 };
 
 export default async function PracticePage() {
@@ -19,15 +23,17 @@ export default async function PracticePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [subtestsRes, progressRes] = await Promise.all([
+  const [subtestsRes, progressRes, premium] = await Promise.all([
     supabase
       .from("subtests")
       .select("id, name, slug, display_order, topics(id)")
+      .eq("exam_type", "upcat")
       .order("display_order"),
     supabase
       .from("user_topic_progress")
       .select("topic_id, accuracy_percentage, total_attempts")
       .eq("user_id", user.id),
+    isPremium(user.id),
   ]);
 
   const subtests = subtestsRes.data ?? [];
@@ -56,6 +62,7 @@ export default async function PracticePage() {
       accuracy: Math.round(avgAccuracy),
       topicCount: topicIds.length,
       attemptedCount: attempted.length,
+      isPremiumSubtest: PREMIUM_SUBTESTS.includes(subtest.slug),
     };
   });
 
@@ -74,6 +81,7 @@ export default async function PracticePage() {
         {subtestStats.map((subtest) => {
           const meta = SUBTEST_META[subtest.slug];
           if (!meta) return null;
+          const locked = subtest.isPremiumSubtest && !premium;
           return (
             <Link key={subtest.id} href={`/practice/${subtest.slug}`}>
               <Card className="rounded-2xl border-border shadow-sm hover:border-primary/40 hover:shadow-md transition-all">
@@ -84,9 +92,17 @@ export default async function PracticePage() {
                     strokeWidth={6}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-base font-semibold text-foreground">
-                      {subtest.name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-base font-semibold text-foreground">
+                        {subtest.name}
+                      </p>
+                      {locked && (
+                        <Badge variant="secondary" className="text-[10px] py-0 px-1.5 gap-0.5">
+                          <Lock className="h-2.5 w-2.5" />
+                          PRO
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {subtest.topicCount} topics ·{" "}
                       {subtest.attemptedCount === 0

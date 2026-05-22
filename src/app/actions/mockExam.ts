@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { SCHOOL_EXAMS } from "@/lib/constants";
+import { SCHOOL_EXAMS, FILIPINO_TOPIC_SLUGS } from "@/lib/constants";
 import { canStartMockExam } from "@/lib/plan";
 import type { ExamType } from "@/lib/constants";
 
@@ -20,13 +20,13 @@ export async function startMockExamSession(
   }
 
   const examConfig = SCHOOL_EXAMS[examType];
+  const subtestSlugs = Object.keys(examConfig.subtestItemCounts);
 
-  // Get subtests for this exam type, ordered
+  // Fetch shared subtests by slug — all exams draw from the same question bank
   const { data: subtests } = await supabase
     .from("subtests")
-    .select("id, slug, topics(id)")
-    .eq("exam_type", examType)
-    .order("display_order");
+    .select("id, slug, topics(id, slug)")
+    .in("slug", subtestSlugs);
 
   if (!subtests || subtests.length === 0) throw new Error("No subtests found");
 
@@ -39,7 +39,14 @@ export async function startMockExamSession(
         ];
       if (!itemCount) return [];
 
-      const topicIds = (subtest.topics as { id: string }[]).map((t) => t.id);
+      // Exclude Filipino topics for non-UPCAT exams
+      const allTopics = subtest.topics as { id: string; slug: string }[];
+      const topicIds =
+        examType === "upcat"
+          ? allTopics.map((t) => t.id)
+          : allTopics
+              .filter((t) => !FILIPINO_TOPIC_SLUGS.includes(t.slug))
+              .map((t) => t.id);
       if (topicIds.length === 0) return [];
 
       const { data: questions } = await supabase

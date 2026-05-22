@@ -17,8 +17,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const body = await req.json().catch(() => ({}));
+  const plan: "monthly" | "annual" = body.plan === "annual" ? "annual" : "monthly";
+
+  const amountCents =
+    plan === "annual"
+      ? parseInt(process.env.PAYMONGO_ANNUAL_AMOUNT_CENTS ?? "99900")
+      : parseInt(process.env.PAYMONGO_MONTHLY_AMOUNT_CENTS ?? "14900");
+
+  const planLabel = plan === "annual" ? "Annual (₱999)" : "Monthly (₱149)";
+  const duration = plan === "annual" ? "365 days" : "30 days";
+
   const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_APP_URL!;
-  const amountCents = parseInt(process.env.PAYMONGO_AMOUNT_CENTS ?? "19900");
 
   const response = await fetch(`${PAYMONGO_API}/checkout_sessions`, {
     method: "POST",
@@ -31,7 +41,7 @@ export async function POST(req: NextRequest) {
         attributes: {
           line_items: [
             {
-              name: "Libreview Premium (30 days)",
+              name: `Libreview Premium – ${planLabel}`,
               quantity: 1,
               amount: amountCents,
               currency: "PHP",
@@ -40,11 +50,11 @@ export async function POST(req: NextRequest) {
           payment_method_types: ["gcash", "paymaya", "card"],
           success_url: `${origin}/upgrade/success`,
           cancel_url: `${origin}/upgrade`,
-          description: "Libreview Premium — 30 days of unlimited access",
+          description: `Libreview Premium — ${duration} of unlimited access`,
           send_email_receipt: true,
           show_description: true,
           show_line_items: true,
-          metadata: { user_id: user.id },
+          metadata: { user_id: user.id, plan_type: plan },
         },
       },
     }),

@@ -1,0 +1,743 @@
+/**
+ * Seeds the Reasoning subtest with 5 topics and 12 questions each.
+ * Run: npx ts-node --project tsconfig.seed.json scripts/seed-reasoning.ts
+ */
+
+import { createClient } from "@supabase/supabase-js";
+import * as dotenv from "dotenv";
+import * as path from "path";
+
+dotenv.config({ path: path.join(__dirname, "../.env.local") });
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
+type Q = {
+  question_text: string;
+  choice_a: string;
+  choice_b: string;
+  choice_c: string;
+  choice_d: string;
+  correct_choice: "a" | "b" | "c" | "d";
+  explanation: string;
+  difficulty: 1 | 2 | 3;
+};
+
+const TOPICS: { name: string; slug: string; description: string; display_order: number; questions: Q[] }[] = [
+  {
+    name: "Logic & Critical Thinking",
+    slug: "logic",
+    description: "Syllogisms, logical deductions, if-then reasoning, and identifying fallacies.",
+    display_order: 1,
+    questions: [
+      {
+        question_text: "All dogs are animals. Some animals are pets. Which conclusion follows?",
+        choice_a: "All dogs are pets.",
+        choice_b: "Some dogs may be pets.",
+        choice_c: "No dogs are pets.",
+        choice_d: "All pets are dogs.",
+        correct_choice: "b",
+        explanation: "We know all dogs are animals, and some animals are pets, so it is possible (but not certain) that some dogs are pets.",
+        difficulty: 2,
+      },
+      {
+        question_text: "If it rains, the ground is wet. The ground is wet. What can you conclude?",
+        choice_a: "It rained.",
+        choice_b: "It did not rain.",
+        choice_c: "It may or may not have rained.",
+        choice_d: "The ground is always wet.",
+        correct_choice: "c",
+        explanation: "A wet ground has many possible causes. This is the fallacy of affirming the consequent — we cannot conclude that rain was the cause.",
+        difficulty: 2,
+      },
+      {
+        question_text: "No birds are mammals. All eagles are birds. Therefore:",
+        choice_a: "Some eagles are mammals.",
+        choice_b: "All eagles are mammals.",
+        choice_c: "No eagles are mammals.",
+        choice_d: "All mammals are eagles.",
+        correct_choice: "c",
+        explanation: "Since all eagles are birds, and no birds are mammals, it follows that no eagles are mammals.",
+        difficulty: 1,
+      },
+      {
+        question_text: "If A → B and B → C, which is definitely true?",
+        choice_a: "C → A",
+        choice_b: "A → C",
+        choice_c: "B → A",
+        choice_d: "C → B",
+        correct_choice: "b",
+        explanation: "By transitivity: if A implies B and B implies C, then A implies C.",
+        difficulty: 1,
+      },
+      {
+        question_text: "Which argument is an example of circular reasoning?",
+        choice_a: "The Bible is true because it says so in the Bible.",
+        choice_b: "The sun rises every day; therefore it will rise tomorrow.",
+        choice_c: "All swans I have seen are white; therefore all swans are white.",
+        choice_d: "He is rich, so he must be smart.",
+        correct_choice: "a",
+        explanation: "Circular reasoning uses the conclusion as a premise for itself, which is exactly what this example does.",
+        difficulty: 2,
+      },
+      {
+        question_text: "All managers attend the meeting. Maria did not attend the meeting. What follows?",
+        choice_a: "Maria is a manager.",
+        choice_b: "Maria is not a manager.",
+        choice_c: "Some managers are absent.",
+        choice_d: "The meeting was cancelled.",
+        correct_choice: "b",
+        explanation: "Contrapositive: if all managers attend, then anyone who did not attend is not a manager.",
+        difficulty: 2,
+      },
+      {
+        question_text: "If today is Monday, then tomorrow is Tuesday. Today is not Monday. What follows?",
+        choice_a: "Tomorrow is not Tuesday.",
+        choice_b: "Tomorrow may or may not be Tuesday.",
+        choice_c: "Tomorrow is Wednesday.",
+        choice_d: "Today is Sunday.",
+        correct_choice: "b",
+        explanation: "Denying the antecedent is a formal fallacy. Tuesday can still arrive through other days of the week.",
+        difficulty: 3,
+      },
+      {
+        question_text: "Some cats are black. All black things absorb heat. Therefore:",
+        choice_a: "All cats absorb heat.",
+        choice_b: "Some cats absorb heat.",
+        choice_c: "No cats absorb heat.",
+        choice_d: "All things that absorb heat are cats.",
+        correct_choice: "b",
+        explanation: "The cats that are black absorb heat; since some cats are black, some cats absorb heat.",
+        difficulty: 2,
+      },
+      {
+        question_text: "Either it is raining or it is sunny. It is not raining. Therefore:",
+        choice_a: "It is sunny.",
+        choice_b: "It is neither rainy nor sunny.",
+        choice_c: "It may or may not be sunny.",
+        choice_d: "It will rain later.",
+        correct_choice: "a",
+        explanation: "Disjunctive syllogism: if one of two exclusive options is false, the other must be true.",
+        difficulty: 1,
+      },
+      {
+        question_text: "Which of these is a valid deductive conclusion?\nPremise 1: All fruits have seeds.\nPremise 2: A mango is a fruit.",
+        choice_a: "Some mangoes have seeds.",
+        choice_b: "All mangoes have seeds.",
+        choice_c: "Mangoes may have seeds.",
+        choice_d: "No mangoes have seeds.",
+        correct_choice: "b",
+        explanation: "If all fruits have seeds and a mango is a fruit, then (all) mangoes must have seeds.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A statement is followed by two assumptions. Assumption I: Students prefer online classes. Assumption II: Technology is always beneficial. The statement is: 'Schools should shift to online learning to improve education.' Which assumption(s) are implicit?",
+        choice_a: "Only Assumption I",
+        choice_b: "Only Assumption II",
+        choice_c: "Both I and II",
+        choice_d: "Neither I nor II",
+        correct_choice: "a",
+        explanation: "The shift to online learning implicitly assumes students prefer or benefit from it. Assumption II is too broad to be necessarily implicit.",
+        difficulty: 3,
+      },
+      {
+        question_text: "No politician is honest. Ramon is honest. Therefore:",
+        choice_a: "Ramon is a politician.",
+        choice_b: "Ramon is not a politician.",
+        choice_c: "Some politicians are honest.",
+        choice_d: "All honest people are like Ramon.",
+        correct_choice: "b",
+        explanation: "If no politician is honest and Ramon is honest, Ramon cannot be a politician.",
+        difficulty: 1,
+      },
+    ],
+  },
+  {
+    name: "Numerical Ability",
+    slug: "numerical",
+    description: "Number series, arithmetic reasoning, ratio, percentage, and basic number theory.",
+    display_order: 2,
+    questions: [
+      {
+        question_text: "What is the next number in the series: 2, 6, 12, 20, 30, __?",
+        choice_a: "40",
+        choice_b: "42",
+        choice_c: "44",
+        choice_d: "45",
+        correct_choice: "b",
+        explanation: "Differences: 4, 6, 8, 10, 12. Next term: 30 + 12 = 42.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A store marks up a ₱500 item by 40%, then gives a 20% discount. What is the final price?",
+        choice_a: "₱500",
+        choice_b: "₱520",
+        choice_c: "₱560",
+        choice_d: "₱480",
+        correct_choice: "c",
+        explanation: "Marked-up price: 500 × 1.40 = 700. After 20% discount: 700 × 0.80 = ₱560.",
+        difficulty: 2,
+      },
+      {
+        question_text: "The ratio of boys to girls in a class is 3:5. If there are 24 boys, how many girls are there?",
+        choice_a: "35",
+        choice_b: "40",
+        choice_c: "45",
+        choice_d: "48",
+        correct_choice: "b",
+        explanation: "3 parts = 24 boys → 1 part = 8. Girls = 5 × 8 = 40.",
+        difficulty: 1,
+      },
+      {
+        question_text: "What is the next number in the series: 1, 1, 2, 3, 5, 8, __?",
+        choice_a: "11",
+        choice_b: "12",
+        choice_c: "13",
+        choice_d: "14",
+        correct_choice: "c",
+        explanation: "Fibonacci sequence: each term is the sum of the two preceding terms. 5 + 8 = 13.",
+        difficulty: 1,
+      },
+      {
+        question_text: "If 6 workers can build a wall in 10 days, how many days will 15 workers take?",
+        choice_a: "3",
+        choice_b: "4",
+        choice_c: "5",
+        choice_d: "6",
+        correct_choice: "b",
+        explanation: "Total work = 6 × 10 = 60 worker-days. Time = 60 ÷ 15 = 4 days.",
+        difficulty: 2,
+      },
+      {
+        question_text: "What percent of 80 is 12?",
+        choice_a: "12%",
+        choice_b: "15%",
+        choice_c: "18%",
+        choice_d: "20%",
+        correct_choice: "b",
+        explanation: "(12 ÷ 80) × 100 = 15%.",
+        difficulty: 1,
+      },
+      {
+        question_text: "Find the missing number: 4, 9, 16, 25, __, 49",
+        choice_a: "34",
+        choice_b: "36",
+        choice_c: "38",
+        choice_d: "40",
+        correct_choice: "b",
+        explanation: "These are perfect squares: 2², 3², 4², 5², 6², 7². Missing term = 6² = 36.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A car travels at 60 km/h for 2.5 hours. How far does it travel?",
+        choice_a: "120 km",
+        choice_b: "140 km",
+        choice_c: "150 km",
+        choice_d: "160 km",
+        correct_choice: "c",
+        explanation: "Distance = speed × time = 60 × 2.5 = 150 km.",
+        difficulty: 1,
+      },
+      {
+        question_text: "The average of 5 numbers is 18. If one number is removed, the average becomes 16. What was the removed number?",
+        choice_a: "24",
+        choice_b: "26",
+        choice_c: "28",
+        choice_d: "30",
+        correct_choice: "b",
+        explanation: "Sum of 5 numbers = 5 × 18 = 90. Sum of remaining 4 = 4 × 16 = 64. Removed number = 90 − 64 = 26.",
+        difficulty: 2,
+      },
+      {
+        question_text: "Which number is divisible by both 4 and 6?",
+        choice_a: "14",
+        choice_b: "18",
+        choice_c: "24",
+        choice_d: "26",
+        correct_choice: "c",
+        explanation: "LCM(4, 6) = 12. Among the choices, 24 = 2 × 12 is divisible by both.",
+        difficulty: 1,
+      },
+      {
+        question_text: "What is the next term: 3, 7, 15, 31, __?",
+        choice_a: "55",
+        choice_b: "60",
+        choice_c: "63",
+        choice_d: "65",
+        correct_choice: "c",
+        explanation: "Each term = 2 × previous term + 1: 3 → 7 → 15 → 31 → 63.",
+        difficulty: 2,
+      },
+      {
+        question_text: "A box contains 3 red, 4 blue, and 5 green balls. What is the probability of picking a blue ball?",
+        choice_a: "1/3",
+        choice_b: "1/4",
+        choice_c: "1/3",
+        choice_d: "4/12",
+        correct_choice: "d",
+        explanation: "P(blue) = 4/(3+4+5) = 4/12 = 1/3. The answer 4/12 is equivalent to 1/3 and is the unsimplified form offered.",
+        difficulty: 1,
+      },
+    ],
+  },
+  {
+    name: "Verbal Ability",
+    slug: "verbal",
+    description: "Verbal analogies, word relationships, sentence completion, and verbal reasoning.",
+    display_order: 3,
+    questions: [
+      {
+        question_text: "DOCTOR : HOSPITAL :: TEACHER : ___",
+        choice_a: "Library",
+        choice_b: "Clinic",
+        choice_c: "School",
+        choice_d: "Office",
+        correct_choice: "c",
+        explanation: "A doctor works in a hospital; a teacher works in a school.",
+        difficulty: 1,
+      },
+      {
+        question_text: "LOUD : QUIET :: FAST : ___",
+        choice_a: "Quick",
+        choice_b: "Slow",
+        choice_c: "Speed",
+        choice_d: "Running",
+        correct_choice: "b",
+        explanation: "Loud and quiet are antonyms; fast and slow are antonyms.",
+        difficulty: 1,
+      },
+      {
+        question_text: "CHAPTER : BOOK :: SCENE : ___",
+        choice_a: "Movie",
+        choice_b: "Story",
+        choice_c: "Play",
+        choice_d: "Act",
+        correct_choice: "c",
+        explanation: "A chapter is a part of a book; a scene is a part of a play (the most direct structural parallel).",
+        difficulty: 2,
+      },
+      {
+        question_text: "Choose the word most similar in meaning to BENEVOLENT.",
+        choice_a: "Hostile",
+        choice_b: "Indifferent",
+        choice_c: "Kind",
+        choice_d: "Jealous",
+        correct_choice: "c",
+        explanation: "Benevolent means well-meaning and kind.",
+        difficulty: 1,
+      },
+      {
+        question_text: "Choose the word most opposite in meaning to CONCEAL.",
+        choice_a: "Hide",
+        choice_b: "Reveal",
+        choice_c: "Cover",
+        choice_d: "Protect",
+        correct_choice: "b",
+        explanation: "Conceal means to hide; reveal is its antonym.",
+        difficulty: 1,
+      },
+      {
+        question_text: "SURGEON : SCALPEL :: PAINTER : ___",
+        choice_a: "Canvas",
+        choice_b: "Gallery",
+        choice_c: "Brush",
+        choice_d: "Color",
+        correct_choice: "c",
+        explanation: "A surgeon uses a scalpel as a tool; a painter uses a brush as a tool.",
+        difficulty: 1,
+      },
+      {
+        question_text: "Complete the sentence: Despite her ___ schedule, she managed to volunteer every weekend.",
+        choice_a: "Relaxed",
+        choice_b: "Hectic",
+        choice_c: "Empty",
+        choice_d: "Flexible",
+        correct_choice: "b",
+        explanation: "'Despite' signals contrast — the schedule must be demanding to make volunteering notable.",
+        difficulty: 2,
+      },
+      {
+        question_text: "WATER : THIRST :: FOOD : ___",
+        choice_a: "Hunger",
+        choice_b: "Cooking",
+        choice_c: "Plate",
+        choice_d: "Nutrition",
+        correct_choice: "a",
+        explanation: "Water satisfies thirst; food satisfies hunger.",
+        difficulty: 1,
+      },
+      {
+        question_text: "EPHEMERAL most closely means:",
+        choice_a: "Permanent",
+        choice_b: "Short-lived",
+        choice_c: "Colorful",
+        choice_d: "Powerful",
+        correct_choice: "b",
+        explanation: "Ephemeral means lasting for a very short time.",
+        difficulty: 2,
+      },
+      {
+        question_text: "Choose the pair that expresses the same relationship as AUTHOR : NOVEL.",
+        choice_a: "Architect : Building",
+        choice_b: "Reader : Book",
+        choice_c: "Chef : Hungry",
+        choice_d: "Singer : Stage",
+        correct_choice: "a",
+        explanation: "An author creates a novel; an architect designs/creates a building.",
+        difficulty: 2,
+      },
+      {
+        question_text: "Complete the analogy: ARMY : SOLDIER :: FLEET : ___",
+        choice_a: "Captain",
+        choice_b: "Ship",
+        choice_c: "Navy",
+        choice_d: "Ocean",
+        correct_choice: "b",
+        explanation: "An army is a collection of soldiers; a fleet is a collection of ships.",
+        difficulty: 1,
+      },
+      {
+        question_text: "MELANCHOLY most nearly means:",
+        choice_a: "Joyful",
+        choice_b: "Angry",
+        choice_c: "Sad",
+        choice_d: "Confused",
+        correct_choice: "c",
+        explanation: "Melancholy means a feeling of pensive sadness.",
+        difficulty: 1,
+      },
+    ],
+  },
+  {
+    name: "Data Analysis",
+    slug: "data-analysis",
+    description: "Interpreting tables, charts, and graphs; drawing conclusions from data.",
+    display_order: 4,
+    questions: [
+      {
+        question_text: "A bar chart shows monthly sales: Jan ₱80k, Feb ₱65k, Mar ₱90k, Apr ₱75k. What is the average monthly sales?",
+        choice_a: "₱72,500",
+        choice_b: "₱75,000",
+        choice_c: "₱77,500",
+        choice_d: "₱80,000",
+        correct_choice: "c",
+        explanation: "Average = (80 + 65 + 90 + 75) ÷ 4 = 310 ÷ 4 = ₱77,500.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A pie chart shows: Science 30%, Math 25%, English 20%, Filipino 15%, Others 10%. In a class of 200 students, how many take Math?",
+        choice_a: "40",
+        choice_b: "45",
+        choice_c: "50",
+        choice_d: "55",
+        correct_choice: "c",
+        explanation: "25% of 200 = 0.25 × 200 = 50 students.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A table shows test scores: 78, 82, 91, 65, 88. What is the median?",
+        choice_a: "78",
+        choice_b: "82",
+        choice_c: "85",
+        choice_d: "88",
+        correct_choice: "b",
+        explanation: "Arranged in order: 65, 78, 82, 88, 91. The middle value is 82.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A line graph shows population growth from 2018 to 2022: 1M, 1.1M, 1.25M, 1.4M, 1.6M. What is the trend?",
+        choice_a: "Decreasing",
+        choice_b: "Constant",
+        choice_c: "Increasing at a constant rate",
+        choice_d: "Increasing at an accelerating rate",
+        correct_choice: "d",
+        explanation: "Differences: 0.1, 0.15, 0.15, 0.2 — the increments are growing, so the rate is accelerating.",
+        difficulty: 2,
+      },
+      {
+        question_text: "A school's enrollment data: Grade 7: 320, Grade 8: 305, Grade 9: 298, Grade 10: 310. Which grade has the lowest enrollment?",
+        choice_a: "Grade 7",
+        choice_b: "Grade 8",
+        choice_c: "Grade 9",
+        choice_d: "Grade 10",
+        correct_choice: "c",
+        explanation: "298 is the smallest value among 320, 305, 298, and 310.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A survey of 500 people found 60% prefer product A. How many prefer product B if the remaining prefer B or C equally?",
+        choice_a: "80",
+        choice_b: "100",
+        choice_c: "120",
+        choice_d: "160",
+        correct_choice: "b",
+        explanation: "60% prefer A → 40% = 200 prefer B or C. Split equally: 100 prefer B.",
+        difficulty: 2,
+      },
+      {
+        question_text: "A scatter plot shows a strong positive correlation between study hours and test scores. What does this mean?",
+        choice_a: "Students who study more always score 100%.",
+        choice_b: "More study hours generally leads to higher scores.",
+        choice_c: "Study hours cause high scores.",
+        choice_d: "Test scores determine study hours.",
+        correct_choice: "b",
+        explanation: "Correlation indicates a relationship trend, not causation or certainty.",
+        difficulty: 2,
+      },
+      {
+        question_text: "Data set: 5, 8, 12, 8, 15, 8, 20. What is the mode?",
+        choice_a: "5",
+        choice_b: "8",
+        choice_c: "12",
+        choice_d: "15",
+        correct_choice: "b",
+        explanation: "The mode is the most frequently occurring value. 8 appears 3 times.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A table shows: Year 1: 200 units, Year 2: 250 units, Year 3: 300 units. If the same rate of increase continues, what is the Year 4 prediction?",
+        choice_a: "330",
+        choice_b: "340",
+        choice_c: "350",
+        choice_d: "360",
+        correct_choice: "c",
+        explanation: "The increase per year is constant at 50 units. Year 4 = 300 + 50 = 350.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A frequency table shows grades A: 5, B: 12, C: 8, D: 3, F: 2. What percentage of students got B or higher?",
+        choice_a: "55%",
+        choice_b: "57%",
+        choice_c: "58%",
+        choice_d: "60%",
+        correct_choice: "b",
+        explanation: "B or higher = A + B = 5 + 12 = 17 out of total 30 students. (17/30) × 100 ≈ 56.7% ≈ 57%.",
+        difficulty: 2,
+      },
+      {
+        question_text: "In a double bar graph comparing two classes' scores, Class A averages 78 and Class B averages 85. By how much does Class B outperform Class A?",
+        choice_a: "5 points",
+        choice_b: "6 points",
+        choice_c: "7 points",
+        choice_d: "8 points",
+        correct_choice: "c",
+        explanation: "85 − 78 = 7 points.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A dataset has mean = 50, median = 48. This suggests the distribution is:",
+        choice_a: "Symmetric",
+        choice_b: "Skewed left (negatively skewed)",
+        choice_c: "Skewed right (positively skewed)",
+        choice_d: "Bimodal",
+        correct_choice: "c",
+        explanation: "When mean > median, the distribution is positively (right) skewed — a few high values pull the mean upward.",
+        difficulty: 3,
+      },
+    ],
+  },
+  {
+    name: "Visual & Pattern Recognition",
+    slug: "visual-pattern",
+    description: "Identifying sequences, completing patterns, spatial reasoning, and matrix problems.",
+    display_order: 5,
+    questions: [
+      {
+        question_text: "In a 3×3 matrix, the top row has 1, 2, 3; the middle row has 4, 5, 6; the bottom row has 7, 8, __. What is the missing number?",
+        choice_a: "7",
+        choice_b: "8",
+        choice_c: "9",
+        choice_d: "10",
+        correct_choice: "c",
+        explanation: "The matrix lists consecutive integers 1–9. The missing value is 9.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A shape sequence: circle, triangle, square, circle, triangle, __. What comes next?",
+        choice_a: "Circle",
+        choice_b: "Triangle",
+        choice_c: "Square",
+        choice_d: "Pentagon",
+        correct_choice: "c",
+        explanation: "The pattern repeats: circle, triangle, square. After circle and triangle, the next is square.",
+        difficulty: 1,
+      },
+      {
+        question_text: "Each row follows a rule. Row 1: 2 4 8. Row 2: 3 6 12. Row 3: 5 10 __. What is the missing number?",
+        choice_a: "15",
+        choice_b: "18",
+        choice_c: "20",
+        choice_d: "25",
+        correct_choice: "c",
+        explanation: "Each row doubles: 5, 10, 20.",
+        difficulty: 1,
+      },
+      {
+        question_text: "In a pattern: ●○○●○○●○__. What is missing?",
+        choice_a: "●",
+        choice_b: "○",
+        choice_c: "○○",
+        choice_d: "●○",
+        correct_choice: "b",
+        explanation: "The repeating unit is ●○○. After ●○○●○○●, the next symbol is ○ (first of a new ●○○ triplet? No — ●○__. Position: 1●,2○,3○,4●,5○,6○,7●,8○,9__. Position 9 = ○).",
+        difficulty: 2,
+      },
+      {
+        question_text: "A figure is rotated 90° clockwise. An arrow pointing UP will point:",
+        choice_a: "Down",
+        choice_b: "Left",
+        choice_c: "Right",
+        choice_d: "Up",
+        correct_choice: "c",
+        explanation: "A 90° clockwise rotation turns up → right.",
+        difficulty: 1,
+      },
+      {
+        question_text: "In a number grid, the rule is: each number equals the sum of the two above it. Row 1: 1 2 3. Row 2: 3 5 __. What is missing?",
+        choice_a: "7",
+        choice_b: "8",
+        choice_c: "9",
+        choice_d: "10",
+        correct_choice: "b",
+        explanation: "5 + 3 = 8. (Each number = sum of the two directly above it.)",
+        difficulty: 2,
+      },
+      {
+        question_text: "Complete the pattern: 1A, 2B, 3C, 4D, __",
+        choice_a: "5D",
+        choice_b: "5E",
+        choice_c: "6E",
+        choice_d: "4E",
+        correct_choice: "b",
+        explanation: "Numbers increment by 1 and letters advance alphabetically. After 4D comes 5E.",
+        difficulty: 1,
+      },
+      {
+        question_text: "A square is divided into 4 equal smaller squares. The top-left and bottom-right are shaded. If the figure is rotated 180°, which are now shaded?",
+        choice_a: "Top-left and bottom-right",
+        choice_b: "Top-right and bottom-left",
+        choice_c: "Top-left and top-right",
+        choice_d: "All four squares",
+        correct_choice: "a",
+        explanation: "Rotating 180° maps top-left to bottom-right and bottom-right to top-left. The same two diagonal squares remain shaded.",
+        difficulty: 2,
+      },
+      {
+        question_text: "Odd one out: Triangle, Rectangle, Circle, Cube, Pentagon",
+        choice_a: "Triangle",
+        choice_b: "Rectangle",
+        choice_c: "Cube",
+        choice_d: "Pentagon",
+        correct_choice: "c",
+        explanation: "All others are 2D shapes; a cube is a 3D solid.",
+        difficulty: 1,
+      },
+      {
+        question_text: "Series: Z, X, V, T, __",
+        choice_a: "Q",
+        choice_b: "R",
+        choice_c: "S",
+        choice_d: "U",
+        correct_choice: "b",
+        explanation: "Each letter skips one in reverse: Z(−2)X(−2)V(−2)T(−2)R.",
+        difficulty: 2,
+      },
+      {
+        question_text: "In a 3×3 grid, each row's numbers sum to 15 (magic square). Row 1: 2 7 6. Row 2: 9 5 1. Row 3: 4 __ 8. What is missing?",
+        choice_a: "2",
+        choice_b: "3",
+        choice_c: "4",
+        choice_d: "5",
+        correct_choice: "b",
+        explanation: "Row 3 must sum to 15: 4 + x + 8 = 15 → x = 3.",
+        difficulty: 2,
+      },
+      {
+        question_text: "A sequence of shapes increases by 2 sides each time: triangle, pentagon, heptagon, __",
+        choice_a: "Octagon",
+        choice_b: "Nonagon",
+        choice_c: "Decagon",
+        choice_d: "Dodecagon",
+        correct_choice: "b",
+        explanation: "Triangle = 3, pentagon = 5, heptagon = 7, next = 9 sides = nonagon.",
+        difficulty: 2,
+      },
+    ],
+  },
+];
+
+async function main() {
+  // Upsert the reasoning subtest
+  const { data: subtest, error: subtestError } = await supabase
+    .from("subtests")
+    .upsert(
+      {
+        name: "Reasoning",
+        slug: "reasoning",
+        description: "Develops logical, numerical, verbal, analytical, and spatial reasoning skills.",
+        exam_type: "upcat",
+        upcat_item_count: 0,
+        mock_item_count: 0,
+        display_order: 5,
+      },
+      { onConflict: "slug" }
+    )
+    .select("id")
+    .single();
+
+  if (subtestError || !subtest) {
+    console.error("Failed to upsert subtest:", subtestError);
+    process.exit(1);
+  }
+
+  console.log(`Subtest ID: ${subtest.id}`);
+
+  for (const topic of TOPICS) {
+    const { data: topicRow, error: topicError } = await supabase
+      .from("topics")
+      .upsert(
+        {
+          subtest_id: subtest.id,
+          name: topic.name,
+          slug: topic.slug,
+          description: topic.description,
+          display_order: topic.display_order,
+        },
+        { onConflict: "subtest_id,slug" }
+      )
+      .select("id")
+      .single();
+
+    if (topicError || !topicRow) {
+      console.error(`Failed to upsert topic ${topic.slug}:`, topicError);
+      continue;
+    }
+
+    const questions = topic.questions.map((q) => ({
+      topic_id: topicRow.id,
+      question_text: q.question_text,
+      choice_a: q.choice_a,
+      choice_b: q.choice_b,
+      choice_c: q.choice_c,
+      choice_d: q.choice_d,
+      correct_choice: q.correct_choice,
+      explanation: q.explanation,
+      difficulty: q.difficulty,
+      status: "approved",
+    }));
+
+    const { error: qError } = await supabase.from("questions").insert(questions);
+    if (qError) {
+      console.error(`Failed to insert questions for ${topic.slug}:`, qError);
+    } else {
+      console.log(`  ✓ ${topic.name}: ${questions.length} questions`);
+    }
+  }
+
+  console.log("Done seeding Reasoning.");
+}
+
+main().catch(console.error);

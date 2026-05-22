@@ -19,74 +19,86 @@ export const SUBTESTS = [
   { slug: "reading-comprehension", name: "Reading Comprehension", icon: "📝" },
   { slug: "science", name: "Science", icon: "🔬" },
   { slug: "mathematics", name: "Mathematics", icon: "📐" },
+  { slug: "reasoning", name: "Reasoning", icon: "🧠" },
 ] as const;
 
 export type SubtestSlug = (typeof SUBTESTS)[number]["slug"];
+
+/** Subtests that require a Premium subscription to practice. */
+export const PREMIUM_SUBTESTS: string[] = ["reasoning"];
+
+/** Topic slugs inside language-proficiency that are Filipino-language.
+ *  Excluded from non-UPCAT mock exam question pools. */
+export const FILIPINO_TOPIC_SLUGS: string[] = ["filipino-grammar"];
 
 export const MOCK_EXAM = {
   totalTimeSeconds: 3600,
   amberWarningSeconds: 600,
   redWarningSeconds: 300,
   subtestItemCounts: {
-    "language-proficiency": 20,
+    "language-proficiency": 12,
     "reading-comprehension": 15,
     science: 15,
-    mathematics: 10,
+    mathematics: 18,
   },
   totalItems: 60,
 } as const;
 
+// All schools draw from the same shared question bank (5 core subtests).
+// Only the item counts differ. Non-UPCAT exams exclude Filipino topics.
 export const SCHOOL_EXAMS = {
   upcat: {
     name: "UPCAT",
     fullName: "UP College Admission Test",
-    description: "All 4 subtests · 60 items · 60 minutes",
+    description: "Math · Reading · Science · Language · 60 items · 60 min",
     totalTimeSeconds: 3600,
     totalItems: 60,
     subtestItemCounts: {
-      "language-proficiency": 20,
+      "language-proficiency": 12,
       "reading-comprehension": 15,
       science: 15,
-      mathematics: 10,
+      mathematics: 18,
     },
   },
   acet: {
     name: "ACET",
     fullName: "Ateneo College Entrance Test",
-    description: "Language · Reading · Science · Math · 60 items · 60 minutes",
+    description: "Reading/Language · Reasoning · Math · 60 items · 60 min",
     totalTimeSeconds: 3600,
     totalItems: 60,
     subtestItemCounts: {
-      "acet-language-proficiency": 20,
-      "acet-reading-comprehension": 15,
-      "acet-science": 15,
-      "acet-mathematics": 10,
+      "language-proficiency": 15,
+      "reading-comprehension": 15,
+      mathematics: 15,
+      reasoning: 15,
     },
   },
   dlsu: {
     name: "DLSUCET",
     fullName: "De La Salle University College Entrance Test",
-    description: "Math-heavy · 60 items · 60 minutes",
+    description: "Math · Science · Language/Reading · Reasoning · 60 items · 60 min",
     totalTimeSeconds: 3600,
     totalItems: 60,
     subtestItemCounts: {
-      "dlsu-language-proficiency": 15,
-      "dlsu-reading-comprehension": 10,
-      "dlsu-mathematics": 25,
-      "dlsu-science": 10,
+      "language-proficiency": 7,
+      "reading-comprehension": 8,
+      science: 18,
+      mathematics: 21,
+      reasoning: 6,
     },
   },
   ust: {
     name: "USTET",
     fullName: "University of Santo Tomas Entrance Test",
-    description: "Science-heavy · 60 items · 60 minutes",
+    description: "Science · Math · Language/Reading · Reasoning · 60 items · 60 min",
     totalTimeSeconds: 3600,
     totalItems: 60,
     subtestItemCounts: {
-      "ust-language-proficiency": 15,
-      "ust-reading-comprehension": 15,
-      "ust-science": 15,
-      "ust-mathematics": 15,
+      "language-proficiency": 6,
+      "reading-comprehension": 6,
+      science: 21,
+      mathematics: 18,
+      reasoning: 9,
     },
   },
 } as const;

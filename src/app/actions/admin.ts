@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import type { Choice, QuestionStatus } from "@/lib/supabase/types";
+import { activatePremium, deactivatePremium } from "@/lib/activatePremium";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -202,6 +203,29 @@ export async function resolveReport(id: string): Promise<ActionResult> {
       .update({ is_resolved: true })
       .eq("id", id);
     if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
+// ── User Plan Management (testing / admin override) ───────────────────────────
+
+export async function grantPremium(userId: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await activatePremium(userId, expiresAt, "monthly");
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
+export async function revokePremium(userId: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    await deactivatePremium(userId);
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
