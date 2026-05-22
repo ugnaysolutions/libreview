@@ -1,13 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, XCircle, Clock, Lock, Zap } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Lock, Zap, Bookmark } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AccuracyRing } from "@/components/ui/AccuracyRing";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { isPremium } from "@/lib/plan";
 import type { Choice } from "@/lib/supabase/types";
+import { BookmarkButton } from "@/components/ui/BookmarkButton";
 
 function formatDuration(seconds: number | null) {
   if (!seconds) return "—";
@@ -47,7 +48,7 @@ export default async function MockExamResultsPage({
 
   const questionIds = (session as { question_ids: string[] }).question_ids ?? [];
 
-  const [questionsRes, answersRes] = await Promise.all([
+  const [questionsRes, answersRes, bookmarksRes] = await Promise.all([
     supabase
       .from("questions")
       .select(
@@ -58,11 +59,19 @@ export default async function MockExamResultsPage({
       .from("session_answers")
       .select("question_id, chosen_choice, is_correct")
       .eq("session_id", sessionId),
+    supabase
+      .from("bookmarked_questions")
+      .select("question_id")
+      .eq("user_id", user.id)
+      .in("question_id", questionIds),
   ]);
 
   const questionsRaw = questionsRes.data ?? [];
   const answers = answersRes.data ?? [];
   const aMap = new Map(answers.map((a) => [a.question_id, a]));
+  const bookmarkedSet = new Set(
+    (bookmarksRes.data ?? []).map((b) => b.question_id)
+  );
 
   // Order questions to match question_ids
   const qMap = new Map(questionsRaw.map((q) => [q.id, q]));
@@ -194,6 +203,15 @@ export default async function MockExamResultsPage({
           Dashboard
         </Link>
       </div>
+      {premium && (
+        <Link
+          href="/bookmarks"
+          className="flex items-center justify-center gap-1.5 text-xs text-primary font-medium"
+        >
+          <Bookmark className="h-3.5 w-3.5" />
+          View Bookmarks
+        </Link>
+      )}
 
       {/* Per-question review grouped by subtest */}
       <section className="space-y-6">
@@ -281,9 +299,15 @@ export default async function MockExamResultsPage({
                           ) : (
                             <XCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
                           )}
-                          <p className="text-sm font-medium text-foreground leading-snug">
+                          <p className="text-sm font-medium text-foreground leading-snug flex-1">
                             {q.question_text}
                           </p>
+                          {!isCorrect && (
+                            <BookmarkButton
+                              questionId={q.id}
+                              defaultBookmarked={bookmarkedSet.has(q.id)}
+                            />
+                          )}
                         </div>
 
                         {q.image_url && (

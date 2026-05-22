@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Bookmark } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Choice } from "@/lib/supabase/types";
+import { BookmarkButton } from "@/components/ui/BookmarkButton";
 
 export default async function ResultsPage({
   params,
@@ -42,7 +43,7 @@ export default async function ResultsPage({
 
   const questionIds = (session as { question_ids: string[] }).question_ids ?? [];
 
-  const [questionsRes, answersRes] = await Promise.all([
+  const [questionsRes, answersRes, bookmarksRes] = await Promise.all([
     supabase
       .from("questions")
       .select(
@@ -53,10 +54,18 @@ export default async function ResultsPage({
       .from("session_answers")
       .select("question_id, chosen_choice, is_correct")
       .eq("session_id", sessionId),
+    supabase
+      .from("bookmarked_questions")
+      .select("question_id")
+      .eq("user_id", user.id)
+      .in("question_id", questionIds),
   ]);
 
   const questionsRaw = questionsRes.data ?? [];
   const answers = answersRes.data ?? [];
+  const bookmarkedSet = new Set(
+    (bookmarksRes.data ?? []).map((b) => b.question_id)
+  );
 
   const qMap = new Map(questionsRaw.map((q) => [q.id, q]));
   const aMap = new Map(
@@ -124,6 +133,13 @@ export default async function ResultsPage({
           Back to Topics
         </Link>
       </div>
+      <Link
+        href="/bookmarks"
+        className="flex items-center justify-center gap-1.5 text-xs text-primary font-medium"
+      >
+        <Bookmark className="h-3.5 w-3.5" />
+        View Bookmarks
+      </Link>
 
       {/* Per-question review */}
       <section className="space-y-3">
@@ -154,9 +170,15 @@ export default async function ResultsPage({
                     ) : (
                       <XCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
                     )}
-                    <p className="text-sm font-medium text-foreground leading-snug">
+                    <p className="text-sm font-medium text-foreground leading-snug flex-1">
                       {q.question_text}
                     </p>
+                    {!isCorrect && (
+                      <BookmarkButton
+                        questionId={q.id}
+                        defaultBookmarked={bookmarkedSet.has(q.id)}
+                      />
+                    )}
                   </div>
 
                   {q.image_url && (
