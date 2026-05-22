@@ -12,6 +12,7 @@ import {
   Calculator,
   ChevronRight,
   Clock,
+  TrendingDown,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -64,7 +65,7 @@ export default async function DashboardPage() {
         .single(),
       supabase
         .from("subtests")
-        .select("id, name, slug, display_order, topics(id)")
+        .select("id, name, slug, display_order, topics(id, slug, name)")
         .order("display_order"),
       supabase
         .from("user_topic_progress")
@@ -93,6 +94,25 @@ export default async function DashboardPage() {
   const progressMap = new Map(
     progress.map((p) => [p.topic_id, p])
   );
+
+  // Build topic metadata map for weakest-topic lookup
+  type TopicMeta = { topicSlug: string; topicName: string; subtestSlug: string; subtestName: string };
+  const topicMeta = new Map<string, TopicMeta>();
+  for (const subtest of subtests) {
+    for (const topic of (subtest.topics as unknown as { id: string; slug: string; name: string }[])) {
+      topicMeta.set(topic.id, {
+        topicSlug: topic.slug,
+        topicName: topic.name,
+        subtestSlug: subtest.slug,
+        subtestName: subtest.name,
+      });
+    }
+  }
+
+  const weakestEntry = progress
+    .filter((p) => p.total_attempts > 0)
+    .sort((a, b) => Number(a.accuracy_percentage) - Number(b.accuracy_percentage))[0] ?? null;
+  const weakestMeta = weakestEntry ? (topicMeta.get(weakestEntry.topic_id) ?? null) : null;
 
   // Calculate per-subtest accuracy
   const subtestStats = subtests.map((subtest) => {
@@ -276,6 +296,31 @@ export default async function DashboardPage() {
           })}
         </div>
       </section>
+
+      {/* ── Weakest Topic ───────────────────────────────────────── */}
+      {weakestEntry && weakestMeta && (
+        <Link href={`/practice/${weakestMeta.subtestSlug}/${weakestMeta.topicSlug}`}>
+          <Card className="rounded-2xl border-amber-200 bg-amber-50/50 shadow-sm hover:border-amber-300 hover:shadow-md transition-all">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                <TrendingDown className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-amber-600">Needs work</p>
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {weakestMeta.topicName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {weakestMeta.subtestName} · {Math.round(Number(weakestEntry.accuracy_percentage))}% accuracy
+                </p>
+              </div>
+              <div className="flex items-center gap-0.5 text-xs text-primary font-medium shrink-0">
+                Practice <ChevronRight className="h-3.5 w-3.5" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* ── Recent Sessions ──────────────────────────────────────── */}
       <section className="space-y-3">
