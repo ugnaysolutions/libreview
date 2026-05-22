@@ -8,7 +8,13 @@ export const metadata: Metadata = {
     "Prepare for your college entrance test with Libreview — a free, no-ads reviewer for Filipino Grade 12 students. Practice by topic, take mock exams, and track your progress.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-8 text-center">
@@ -26,6 +32,12 @@ export default function LoginPage() {
             </p>
             <p className="text-sm text-muted-foreground">No ads. No paywalls.</p>
           </div>
+
+          {error === "auth" && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3">
+              Sign-in failed. Please try again or contact support if the issue persists.
+            </p>
+          )}
 
           <LoginButton />
         </div>
