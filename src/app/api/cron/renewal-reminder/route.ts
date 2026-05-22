@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://libreview.app";
-
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    return NextResponse.json({ error: "RESEND_API_KEY not configured" }, { status: 500 });
+  }
+  const resend = new Resend(resendKey);
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://libreview.app";
 
   const supabase = createAdminClient();
 
