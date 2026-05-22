@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import type { Choice } from "@/lib/supabase/types";
 import { BookmarkButton } from "@/components/ui/BookmarkButton";
 import { ShareScoreButton } from "@/components/ui/ShareScoreButton";
+import { isPremium } from "@/lib/plan";
+import { Zap } from "lucide-react";
 
 export default async function ResultsPage({
   params,
@@ -44,7 +46,7 @@ export default async function ResultsPage({
 
   const questionIds = (session as { question_ids: string[] }).question_ids ?? [];
 
-  const [questionsRes, answersRes, bookmarksRes] = await Promise.all([
+  const [questionsRes, answersRes, bookmarksRes, premium] = await Promise.all([
     supabase
       .from("questions")
       .select(
@@ -60,6 +62,7 @@ export default async function ResultsPage({
       .select("question_id")
       .eq("user_id", user.id)
       .in("question_id", questionIds),
+    isPremium(user.id),
   ]);
 
   const questionsRaw = questionsRes.data ?? [];
@@ -237,8 +240,8 @@ export default async function ResultsPage({
                     })}
                   </div>
 
-                  {/* Explanation */}
-                  {q.explanation && (
+                  {/* Explanation — premium only */}
+                  {q.explanation && premium && (
                     <div className="bg-muted/50 rounded-xl p-3">
                       <p className="text-xs font-semibold text-muted-foreground mb-1">
                         Explanation
@@ -247,6 +250,20 @@ export default async function ResultsPage({
                         {q.explanation}
                       </p>
                     </div>
+                  )}
+                  {q.explanation && !premium && (
+                    <Link
+                      href="/upgrade"
+                      className="flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2"
+                    >
+                      <p className="text-xs text-amber-700">
+                        See explanation with Premium
+                      </p>
+                      <span className="flex items-center gap-1 text-xs font-semibold text-amber-600 shrink-0">
+                        <Zap className="h-3 w-3" />
+                        Upgrade
+                      </span>
+                    </Link>
                   )}
                 </CardContent>
               </Card>
