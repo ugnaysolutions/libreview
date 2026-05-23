@@ -14,6 +14,8 @@ import {
   Clock,
   TrendingDown,
   Snowflake,
+  CheckCircle2,
+  Zap,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,7 +60,9 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   // Parallel data fetch
-  const [profileRes, subtestsRes, progressRes, sessionsRes, premium] = await Promise.all(
+  const today = new Date().toISOString().split("T")[0];
+
+  const [profileRes, subtestsRes, progressRes, sessionsRes, premium, dailyCompletionRes] = await Promise.all(
     [
       supabase
         .from("user_profiles")
@@ -83,6 +87,12 @@ export default async function DashboardPage() {
         .order("started_at", { ascending: false })
         .limit(3),
       isPremium(user.id),
+      supabase
+        .from("daily_challenge_completions")
+        .select("score")
+        .eq("user_id", user.id)
+        .eq("date", today)
+        .maybeSingle(),
     ]
   );
 
@@ -90,6 +100,7 @@ export default async function DashboardPage() {
   const subtests = subtestsRes.data ?? [];
   const progress = progressRes.data ?? [];
   const sessions = sessionsRes.data ?? [];
+  const dailyCompletion = dailyCompletionRes.data ?? null;
 
   if (!profile) redirect("/onboarding");
 
@@ -147,7 +158,7 @@ export default async function DashboardPage() {
 
   // Streak & countdown
   const streak = profile.streak_count ?? 0;
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = today.slice(0, 7);
   const freezeUsed =
     (profile as { streak_freeze_month?: string; streak_freeze_used?: number })
       .streak_freeze_month === currentMonth
@@ -274,6 +285,49 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Daily Challenge ─────────────────────────────────────── */}
+      {dailyCompletion ? (
+        <Card className="rounded-2xl border-green-200 bg-green-50/50 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                Today&apos;s Challenge · Done!
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {dailyCompletion.score}/5 correct · Come back tomorrow
+              </p>
+            </div>
+            <Flame className="h-4 w-4 text-amber-500 shrink-0" />
+          </CardContent>
+        </Card>
+      ) : (
+        <Link href="/daily-challenge">
+          <Card className="rounded-2xl border-amber-200 bg-amber-50/50 shadow-sm hover:border-amber-300 hover:shadow-md transition-all">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                <Flame className="h-5 w-5 text-amber-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">
+                  Today&apos;s Challenge
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  5 questions · Free · Boosts your streak
+                </p>
+              </div>
+              <div className="flex items-center gap-0.5 text-xs text-amber-600 font-semibold shrink-0">
+                <Zap className="h-3.5 w-3.5" />
+                Start
+                <ChevronRight className="h-3.5 w-3.5" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* ── Quick Practice ───────────────────────────────────────── */}
       <section className="space-y-3">
