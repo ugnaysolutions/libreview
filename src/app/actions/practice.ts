@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PRACTICE_SESSION_QUESTION_COUNT } from "@/lib/constants";
-import { canStartPractice } from "@/lib/plan";
+import { canStartPractice, isPremium } from "@/lib/plan";
 import type { Choice, ReportReason } from "@/lib/supabase/types";
 
 export async function startPracticeSession(
@@ -170,21 +170,48 @@ export async function completePracticeSession(sessionId: string) {
   // Streak logic
   const today = new Date().toISOString().split("T")[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+  const dayBeforeYesterday = new Date(Date.now() - 2 * 86400000)
+    .toISOString()
+    .split("T")[0];
+  const currentMonth = today.slice(0, 7); // YYYY-MM
 
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("streak_count, last_session_date")
+    .select("streak_count, last_session_date, streak_freeze_used, streak_freeze_month")
     .eq("id", user.id)
     .single();
 
   if (profile && profile.last_session_date !== today) {
-    const newStreak =
-      profile.last_session_date === yesterday
-        ? profile.streak_count + 1
-        : 1;
+    const isConsecutive = profile.last_session_date === yesterday;
+    const isMissedOneDay = profile.last_session_date === dayBeforeYesterday;
+
+    // Freeze tokens reset each calendar month
+    const freezeUsed =
+      profile.streak_freeze_month === currentMonth
+        ? (profile.streak_freeze_used ?? 0)
+        : 0;
+
+    let newStreak: number;
+    let usedFreeze = false;
+
+    if (isConsecutive) {
+      newStreak = profile.streak_count + 1;
+    } else if (isMissedOneDay && freezeUsed < 3 && (await isPremium(user.id))) {
+      // Auto-apply a freeze token to bridge the missed day
+      newStreak = profile.streak_count + 1;
+      usedFreeze = true;
+    } else {
+      newStreak = 1;
+    }
+
     await supabase
       .from("user_profiles")
-      .update({ streak_count: newStreak, last_session_date: today })
+      .update({
+        streak_count: newStreak,
+        last_session_date: today,
+        streak_freeze_used: usedFreeze ? freezeUsed + 1 : freezeUsed,
+        streak_freeze_month: currentMonth,
+      })
       .eq("id", user.id);
   }
 }

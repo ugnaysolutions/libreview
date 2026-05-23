@@ -13,12 +13,14 @@ import {
   ChevronRight,
   Clock,
   TrendingDown,
+  Snowflake,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AccuracyRing } from "@/components/ui/AccuracyRing";
 import { cn } from "@/lib/utils";
+import { isPremium } from "@/lib/plan";
 
 const SUBTEST_META: Record<
   string,
@@ -56,7 +58,7 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   // Parallel data fetch
-  const [profileRes, subtestsRes, progressRes, sessionsRes] = await Promise.all(
+  const [profileRes, subtestsRes, progressRes, sessionsRes, premium] = await Promise.all(
     [
       supabase
         .from("user_profiles")
@@ -80,6 +82,7 @@ export default async function DashboardPage() {
         .eq("status", "completed")
         .order("started_at", { ascending: false })
         .limit(3),
+      isPremium(user.id),
     ]
   );
 
@@ -144,6 +147,14 @@ export default async function DashboardPage() {
 
   // Streak & countdown
   const streak = profile.streak_count ?? 0;
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const freezeUsed =
+    (profile as { streak_freeze_month?: string; streak_freeze_used?: number })
+      .streak_freeze_month === currentMonth
+      ? ((profile as { streak_freeze_used?: number }).streak_freeze_used ?? 0)
+      : 0;
+  const freezesRemaining = premium ? Math.max(0, 3 - freezeUsed) : 0;
+
   const daysUntilExam = profile.target_exam_date
     ? differenceInCalendarDays(
         parseISO(profile.target_exam_date),
@@ -204,12 +215,30 @@ export default async function DashboardPage() {
                 {streak}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {streak === 1 ? "day streak" : "day streak"}
+                day streak
               </p>
               {streak === 0 && (
                 <p className="text-xs text-amber-500 font-medium mt-0.5">
                   Start today!
                 </p>
+              )}
+              {premium && (
+                <div className="flex items-center gap-0.5 mt-1.5">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Snowflake
+                      key={i}
+                      className={cn(
+                        "h-3 w-3",
+                        i < freezesRemaining
+                          ? "text-blue-400"
+                          : "text-muted-foreground/25"
+                      )}
+                    />
+                  ))}
+                  <span className="text-[10px] text-muted-foreground ml-0.5 leading-none">
+                    {freezesRemaining}/3
+                  </span>
+                </div>
               )}
             </div>
           </CardContent>
