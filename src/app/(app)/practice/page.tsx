@@ -5,6 +5,7 @@ import { BookOpen, BookMarked, FlaskConical, Calculator, Brain, ChevronRight, Lo
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AccuracyRing } from "@/components/ui/AccuracyRing";
+import { SmartDrillCard } from "@/components/ui/SmartDrillCard";
 import { isPremium } from "@/lib/plan";
 import { PREMIUM_SUBTESTS } from "@/lib/constants";
 
@@ -39,6 +40,7 @@ export default async function PracticePage() {
   const subtests = subtestsRes.data ?? [];
   const progress = progressRes.data ?? [];
   const progressMap = new Map(progress.map((p) => [p.topic_id, p]));
+  const hasHistory = progress.some((p) => p.total_attempts > 0);
 
   const subtestStats = subtests.map((subtest) => {
     const topicIds = (subtest.topics as unknown as { id: string }[]).map(
@@ -76,6 +78,8 @@ export default async function PracticePage() {
           Choose a subject to start practicing
         </p>
       </div>
+
+      <SmartDrillCard premium={premium} hasHistory={hasHistory} />
 
       <div className="space-y-3">
         {subtestStats.map((subtest) => {
