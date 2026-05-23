@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Lock,
   Zap,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,7 +52,7 @@ export default async function ProgressPage() {
       supabase
         .from("subtests")
         .select(
-          "id, name, slug, display_order, topics(id, name, display_order)"
+          "id, name, slug, display_order, topics(id, name, slug, display_order)"
         )
         .order("display_order"),
       supabase
@@ -68,7 +69,7 @@ export default async function ProgressPage() {
         .eq("user_id", user.id)
         .eq("status", "completed")
         .order("started_at", { ascending: false })
-        .limit(20),
+        .limit(10),
       supabase
         .from("exam_sessions")
         .select("started_at")
@@ -378,14 +379,23 @@ export default async function ProgressPage() {
             subtest.topics as unknown as {
               id: string;
               name: string;
+              slug: string;
               display_order: number | null;
             }[]
           ).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
-          const topicProgresses = topics
-            .map((t) => progressMap.get(t.id))
-            .filter(Boolean) as typeof progress;
-          const attempted = topicProgresses.filter((p) => p.total_attempts > 0);
+          const practicedTopics = topics
+            .filter((t) => {
+              const p = progressMap.get(t.id);
+              return p && p.total_attempts > 0;
+            })
+            .sort((a, b) => {
+              const pa = Number(progressMap.get(a.id)?.accuracy_percentage ?? 0);
+              const pb = Number(progressMap.get(b.id)?.accuracy_percentage ?? 0);
+              return pa - pb; // weakest first
+            });
+          const notStartedCount = topics.length - practicedTopics.length;
+          const attempted = practicedTopics.map((t) => progressMap.get(t.id)!);
           const subtestAccuracy =
             attempted.length > 0
               ? Math.round(
@@ -427,56 +437,75 @@ export default async function ProgressPage() {
                   </div>
                 </div>
 
-                {/* Topics list */}
+                {/* Topics list — practiced only, weakest first */}
                 <div className="divide-y divide-border">
-                  {topics.map((topic) => {
-                    const p = progressMap.get(topic.id);
-                    const accuracy = p
-                      ? Math.round(Number(p.accuracy_percentage))
-                      : 0;
-                    const lastPracticed = p?.last_practiced_at
-                      ? format(parseISO(p.last_practiced_at), "MMM d")
-                      : null;
-
-                    return (
-                      <div
-                        key={topic.id}
-                        className="flex items-center gap-3 px-4 py-3"
+                  {practicedTopics.length === 0 ? (
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <p className="text-xs text-muted-foreground">
+                        No topics practiced yet
+                      </p>
+                      <Link
+                        href={`/practice/${subtest.slug}`}
+                        className="text-xs font-medium text-primary flex items-center gap-0.5"
                       >
-                        <AccuracyRing
-                          accuracy={accuracy}
-                          size={40}
-                          strokeWidth={4}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1">
-                            <p className="text-xs font-medium text-foreground truncate">
-                              {topic.name}
+                        Explore
+                        <ChevronRight className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  ) : (
+                    practicedTopics.map((topic) => {
+                      const p = progressMap.get(topic.id)!;
+                      const accuracy = Math.round(Number(p.accuracy_percentage));
+                      const lastPracticed = p.last_practiced_at
+                        ? format(parseISO(p.last_practiced_at), "MMM d")
+                        : null;
+                      const lvl = getBadgeLevel(accuracy, true);
+
+                      return (
+                        <Link
+                          key={topic.id}
+                          href={`/practice/${subtest.slug}/${topic.slug}`}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+                        >
+                          <AccuracyRing
+                            accuracy={accuracy}
+                            size={40}
+                            strokeWidth={4}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1">
+                              <p className="text-xs font-medium text-foreground truncate">
+                                {topic.name}
+                              </p>
+                              {lvl && <TopicBadge level={lvl} size={12} />}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                              {p.total_attempts} answered{lastPracticed ? ` · ${lastPracticed}` : ""}
                             </p>
-                            {(() => {
-                              const lvl = getBadgeLevel(accuracy, !!(p && p.total_attempts > 0));
-                              return lvl ? <TopicBadge level={lvl} size={12} /> : null;
-                            })()}
                           </div>
-                          {p && p.total_attempts > 0 ? (
-                            <p className="text-[11px] text-muted-foreground">
-                              {p.total_attempts} answered · {lastPracticed}
-                            </p>
-                          ) : (
-                            <p className="text-[11px] text-muted-foreground">
-                              Not started
-                            </p>
-                          )}
-                        </div>
-                        {p && p.total_attempts > 0 && (
                           <p className="text-xs font-semibold text-foreground shrink-0">
                             {accuracy}%
                           </p>
-                        )}
-                      </div>
-                    );
-                  })}
+                        </Link>
+                      );
+                    })
+                  )}
                 </div>
+                {/* Not-started footer */}
+                {notStartedCount > 0 && practicedTopics.length > 0 && (
+                  <div className="border-t border-border px-4 py-2.5 flex items-center justify-between">
+                    <p className="text-[11px] text-muted-foreground">
+                      +{notStartedCount} topic{notStartedCount > 1 ? "s" : ""} not started
+                    </p>
+                    <Link
+                      href={`/practice/${subtest.slug}`}
+                      className="text-[11px] font-medium text-primary flex items-center gap-0.5"
+                    >
+                      Explore
+                      <ChevronRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                )}
               </CardContent>
             </Card>
           );
@@ -520,90 +549,82 @@ export default async function ProgressPage() {
       {/* ── Session history ─────────────────────────────────────── */}
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">
-          Session History
+          Recent Sessions
         </h2>
-        {history.length === 0 ? (
-          <Card className="rounded-2xl border-border shadow-sm">
-            <CardContent className="p-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                No sessions yet. Start practicing!
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {history.map((session) => {
-              const scorePercent =
-                session.total_questions > 0
-                  ? Math.round(
-                      (session.correct_count / session.total_questions) * 100
-                    )
-                  : 0;
-              const topic = session.topics as unknown as {
-                name: string;
-              } | null;
-              const label =
-                session.session_type === "mock_exam"
-                  ? "Mock Exam"
-                  : (topic?.name ?? "Practice");
-              const scoreColor =
-                scorePercent >= 70
-                  ? "#22C55E"
-                  : scorePercent >= 50
-                  ? "#F59E0B"
-                  : "#EF4444";
+        <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
+          <CardContent className="p-0">
+            {history.length === 0 ? (
+              <div className="p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  No sessions yet. Start practicing!
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {history.map((session) => {
+                  const scorePercent =
+                    session.total_questions > 0
+                      ? Math.round(
+                          (session.correct_count / session.total_questions) * 100
+                        )
+                      : 0;
+                  const topic = session.topics as unknown as { name: string } | null;
+                  const label =
+                    session.session_type === "mock_exam"
+                      ? "Mock Exam"
+                      : (topic?.name ?? "Practice");
+                  const scoreColor =
+                    scorePercent >= 70
+                      ? "#22C55E"
+                      : scorePercent >= 50
+                      ? "#F59E0B"
+                      : "#EF4444";
+                  const isMock = session.session_type === "mock_exam";
 
-              return (
-                <Card
-                  key={session.id}
-                  className="rounded-2xl border-border shadow-sm"
-                >
-                  <CardContent className="p-4 flex items-center gap-4">
+                  return (
                     <div
-                      className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 text-white text-xs font-bold"
-                      style={{ backgroundColor: scoreColor }}
+                      key={session.id}
+                      className="flex items-center gap-3 px-4 py-2.5"
                     >
-                      {scorePercent}%
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        {label}
-                      </p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        <span>
-                          {session.correct_count}/{session.total_questions}{" "}
-                          correct
-                        </span>
-                        {session.time_spent_seconds != null && (
-                          <>
-                            <span>·</span>
-                            <Clock className="h-3 w-3" />
-                            <span>
-                              {Math.round(session.time_spent_seconds / 60)}m
-                            </span>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0 space-y-1">
-                      <p className="text-xs text-muted-foreground">
-                        {format(parseISO(session.started_at), "MMM d")}
-                      </p>
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] px-1.5 py-0"
+                      <div
+                        className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 text-white text-[11px] font-bold tabular-nums"
+                        style={{ backgroundColor: scoreColor }}
                       >
-                        {session.session_type === "mock_exam"
-                          ? "Mock"
-                          : "Practice"}
-                      </Badge>
+                        {scorePercent}%
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">
+                          {label}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                          {session.correct_count}/{session.total_questions} correct
+                          {session.time_spent_seconds != null && (
+                            <>
+                              <span>·</span>
+                              <Clock className="h-2.5 w-2.5" />
+                              {Math.round(session.time_spent_seconds / 60)}m
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 space-y-0.5">
+                        <p className="text-[11px] text-muted-foreground">
+                          {format(parseISO(session.started_at), "MMM d")}
+                        </p>
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0"
+                        >
+                          {isMock ? "Mock" : "Practice"}
+                        </Badge>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </section>
     </div>
   );
