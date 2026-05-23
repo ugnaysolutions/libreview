@@ -8,12 +8,18 @@ import {
   Calculator,
   Flame,
   Clock,
+  TrendingUp,
+  Lock,
+  Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AccuracyRing } from "@/components/ui/AccuracyRing";
 import { cn } from "@/lib/utils";
 import { TopicBadge, getBadgeLevel, badgeLabel, type BadgeLevel } from "@/components/ui/TopicBadge";
+import { isPremium } from "@/lib/plan";
+import { MOCK_EXAM } from "@/lib/constants";
 
 const SUBTEST_META: Record<
   string,
@@ -35,7 +41,7 @@ export default async function ProgressPage() {
   const today = new Date();
   const thirtyDaysAgo = subDays(today, 29);
 
-  const [profileRes, subtestsRes, progressRes, historyRes, calendarRes] =
+  const [profileRes, subtestsRes, progressRes, historyRes, calendarRes, premium] =
     await Promise.all([
       supabase
         .from("user_profiles")
@@ -69,6 +75,7 @@ export default async function ProgressPage() {
         .eq("user_id", user.id)
         .eq("status", "completed")
         .gte("started_at", thirtyDaysAgo.toISOString()),
+      isPremium(user.id),
     ]);
 
   const profile = profileRes.data;
@@ -100,6 +107,65 @@ export default async function ProgressPage() {
     }
   }
   achievements.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level] || b.accuracy - a.accuracy);
+
+  // Score Predictor — per-subtest weighted accuracy × UPCAT item counts
+  type SubtestPrediction = {
+    name: string;
+    slug: string;
+    itemCount: number;
+    predicted: number | null;
+    accuracy: number | null;
+  };
+  const UPCAT_ITEMS = MOCK_EXAM.subtestItemCounts;
+  const predictorSubtests: SubtestPrediction[] = subtests
+    .filter((s) => s.slug in UPCAT_ITEMS)
+    .sort((a, b) => a.display_order - b.display_order)
+    .map((s) => {
+      const itemCount = UPCAT_ITEMS[s.slug as keyof typeof UPCAT_ITEMS];
+      const topics = s.topics as unknown as { id: string }[];
+      const practiced = topics
+        .map((t) => progressMap.get(t.id))
+        .filter(
+          (p): p is NonNullable<typeof p> => p != null && p.total_attempts > 0
+        );
+      if (practiced.length === 0) {
+        return { name: s.name, slug: s.slug, itemCount, predicted: null, accuracy: null };
+      }
+      const totalAttempts = practiced.reduce((sum, p) => sum + p.total_attempts, 0);
+      const totalCorrect = practiced.reduce((sum, p) => sum + p.correct_attempts, 0);
+      const acc = totalAttempts > 0 ? totalCorrect / totalAttempts : 0;
+      return {
+        name: s.name,
+        slug: s.slug,
+        itemCount,
+        predicted: acc * itemCount,
+        accuracy: Math.round(acc * 100),
+      };
+    });
+
+  const practicedCount = predictorSubtests.filter((s) => s.predicted !== null).length;
+  const predictorConfidence =
+    practicedCount === 4
+      ? "High confidence"
+      : practicedCount === 3
+      ? "Good estimate"
+      : practicedCount === 2
+      ? "Rough estimate"
+      : "Very rough estimate";
+
+  // Scale practiced subtests' accuracy to the full 60-item UPCAT
+  const practicedAccuracy =
+    practicedCount > 0
+      ? predictorSubtests
+          .filter((s) => s.predicted !== null)
+          .reduce((sum, s) => sum + (s.predicted ?? 0), 0) /
+        predictorSubtests
+          .filter((s) => s.predicted !== null)
+          .reduce((sum, s) => sum + s.itemCount, 0)
+      : 0;
+  const predictedTotal = Math.round(practicedAccuracy * MOCK_EXAM.totalItems);
+  const predictedLow = Math.max(0, predictedTotal - 3);
+  const predictedHigh = Math.min(MOCK_EXAM.totalItems, predictedTotal + 3);
 
   // Build 30-day calendar grid
   const sessionDates = new Set(
@@ -171,6 +237,100 @@ export default async function ProgressPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Score Predictor ─────────────────────────────────────── */}
+      {premium && practicedCount > 0 ? (
+        <Card className="rounded-2xl border-border shadow-sm">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold text-foreground">
+                  Score Predictor
+                </p>
+              </div>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                PRO
+              </Badge>
+            </div>
+
+            {/* Projected total */}
+            <div className="text-center py-1">
+              <p className="text-3xl font-bold text-foreground tabular-nums">
+                {predictedLow}
+                <span className="text-muted-foreground mx-1">–</span>
+                {predictedHigh}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                out of {MOCK_EXAM.totalItems} · {predictorConfidence}
+              </p>
+              {practicedCount < 4 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Based on {practicedCount} of 4 subjects — practice the rest
+                  for a more accurate estimate
+                </p>
+              )}
+            </div>
+
+            {/* Per-subtest breakdown */}
+            <div className="space-y-2">
+              {predictorSubtests.map((s) => {
+                const pct = s.predicted !== null ? s.predicted / s.itemCount : null;
+                return (
+                  <div key={s.slug} className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground w-40 truncate shrink-0">
+                      {s.name}
+                    </p>
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                      {pct !== null && (
+                        <div
+                          className={cn(
+                            "h-full rounded-full",
+                            pct >= 0.7
+                              ? "bg-green-500"
+                              : pct >= 0.5
+                              ? "bg-amber-400"
+                              : "bg-red-400"
+                          )}
+                          style={{ width: `${Math.round(pct * 100)}%` }}
+                        />
+                      )}
+                    </div>
+                    <p className="text-xs font-medium text-foreground shrink-0 w-16 text-right tabular-nums">
+                      {s.predicted !== null
+                        ? `${Math.round(s.predicted)}/${s.itemCount}`
+                        : "—"}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ) : !premium ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+              <Lock className="h-4 w-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Score Predictor
+              </p>
+              <p className="text-xs text-muted-foreground">
+                See your projected UPCAT score
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/upgrade"
+            className="flex items-center gap-1 text-xs font-semibold text-amber-600 shrink-0"
+          >
+            <Zap className="h-3.5 w-3.5" />
+            Upgrade
+          </Link>
+        </div>
+      ) : null}
 
       {/* ── 30-day activity ─────────────────────────────────────── */}
       <section className="space-y-3">
