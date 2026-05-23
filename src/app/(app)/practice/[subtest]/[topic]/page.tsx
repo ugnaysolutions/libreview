@@ -5,6 +5,7 @@ import { ChevronLeft, BookOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AccuracyRing } from "@/components/ui/AccuracyRing";
 import { StartPracticeButton } from "@/components/practice/StartPracticeButton";
+import { isPremium } from "@/lib/plan";
 import { PRACTICE_SESSION_QUESTION_COUNT } from "@/lib/constants";
 
 export default async function TopicPage({
@@ -27,7 +28,7 @@ export default async function TopicPage({
 
   if (!topic) notFound();
 
-  const [questionCountRes, progressRes] = await Promise.all([
+  const [questionCountRes, progressRes, premium] = await Promise.all([
     supabase
       .from("questions")
       .select("id", { count: "exact", head: true })
@@ -39,6 +40,7 @@ export default async function TopicPage({
       .eq("user_id", user.id)
       .eq("topic_id", topic.id)
       .maybeSingle(),
+    isPremium(user.id),
   ]);
 
   const questionCount = questionCountRes.count ?? 0;
@@ -112,8 +114,7 @@ export default async function TopicPage({
             </p>
             <p className="text-xs text-muted-foreground">
               {sessionQuestionCount} question
-              {sessionQuestionCount !== 1 ? "s" : ""} · Multiple choice ·
-              No time limit
+              {sessionQuestionCount !== 1 ? "s" : ""} · Multiple choice
             </p>
           </div>
         </CardContent>
@@ -124,6 +125,8 @@ export default async function TopicPage({
         subtestSlug={subtestSlug}
         topicSlug={topicSlug}
         disabled={questionCount === 0}
+        premium={premium}
+        sessionQuestionCount={sessionQuestionCount}
       />
 
       {questionCount === 0 && (

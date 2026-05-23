@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, XCircle, Bookmark } from "lucide-react";
+import { CheckCircle2, XCircle, Bookmark, Timer } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -31,7 +31,7 @@ export default async function ResultsPage({
 
   const { data: session } = await supabase
     .from("exam_sessions")
-    .select("id, status, total_questions, correct_count, question_ids")
+    .select("id, status, total_questions, correct_count, question_ids, timed_mode")
     .eq("id", sessionId)
     .eq("user_id", user.id)
     .single();
@@ -55,7 +55,7 @@ export default async function ResultsPage({
       .in("id", questionIds),
     supabase
       .from("session_answers")
-      .select("question_id, chosen_choice, is_correct")
+      .select("question_id, chosen_choice, is_correct, time_spent_ms")
       .eq("session_id", sessionId),
     supabase
       .from("bookmarked_questions")
@@ -79,6 +79,15 @@ export default async function ResultsPage({
   const questions = questionIds
     .map((id) => qMap.get(id))
     .filter(Boolean) as typeof questionsRaw;
+
+  const timedMode = (session as { timed_mode: boolean }).timed_mode ?? false;
+  const timings = answers
+    .map((a) => (a as { time_spent_ms: number | null }).time_spent_ms)
+    .filter((t): t is number => t != null);
+  const avgTimeSec =
+    timedMode && timings.length > 0
+      ? Math.round(timings.reduce((s, t) => s + t, 0) / timings.length / 1000)
+      : null;
 
   const correctCount = session.correct_count ?? 0;
   const total = session.total_questions;
@@ -119,6 +128,28 @@ export default async function ResultsPage({
           </p>
         </div>
       </div>
+
+      {/* Avg time card — timed sessions only */}
+      {avgTimeSec !== null && (
+        <div className="rounded-2xl border border-border p-4 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Timer className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Avg time per question
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {avgTimeSec}s &mdash;{" "}
+              {avgTimeSec <= 30
+                ? "Quick — great pacing!"
+                : avgTimeSec <= 60
+                ? "Good pace"
+                : "Try to speed up a bit"}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Action buttons */}
       <div className="grid grid-cols-2 gap-3">

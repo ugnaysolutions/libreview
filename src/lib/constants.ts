@@ -106,6 +106,7 @@ export const SCHOOL_EXAMS = {
 export type ExamType = keyof typeof SCHOOL_EXAMS;
 
 export const PRACTICE_SESSION_QUESTION_COUNT = 10;
+export const TIMED_PRACTICE_SECONDS_PER_QUESTION = 60;
 
 export const FREE_PLAN = {
   dailyPracticeLimit: 2,

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import { PracticeSession } from "@/components/practice/PracticeSession";
 import type { PracticeQuestion } from "@/components/practice/PracticeSession";
+import { TIMED_PRACTICE_SECONDS_PER_QUESTION } from "@/lib/constants";
 
 export default async function SessionPage({
   params,
@@ -23,7 +24,7 @@ export default async function SessionPage({
 
   const { data: session } = await supabase
     .from("exam_sessions")
-    .select("id, status, total_questions, question_ids")
+    .select("id, status, total_questions, question_ids, timed_mode")
     .eq("id", sessionId)
     .eq("user_id", user.id)
     .single();
@@ -36,7 +37,12 @@ export default async function SessionPage({
     );
   }
 
-  const questionIds = (session as { question_ids: string[] }).question_ids ?? [];
+  const sessionData = session as { question_ids: string[]; timed_mode: boolean };
+  const questionIds = sessionData.question_ids ?? [];
+  const timedMode = sessionData.timed_mode ?? false;
+  const totalTimeSeconds = timedMode
+    ? questionIds.length * TIMED_PRACTICE_SECONDS_PER_QUESTION
+    : 0;
 
   const [questionsRes, answersRes] = await Promise.all([
     supabase
@@ -94,6 +100,8 @@ export default async function SessionPage({
       initialIndex={initialIndex}
       subtestSlug={subtestSlug}
       topicSlug={topicSlug}
+      timedMode={timedMode}
+      totalTimeSeconds={totalTimeSeconds}
     />
   );
 }

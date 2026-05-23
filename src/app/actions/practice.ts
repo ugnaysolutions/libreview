@@ -9,7 +9,8 @@ import type { Choice, ReportReason } from "@/lib/supabase/types";
 export async function startPracticeSession(
   topicId: string,
   subtestSlug: string,
-  topicSlug: string
+  topicSlug: string,
+  timedMode: boolean = false
 ): Promise<{ error: "DAILY_LIMIT_REACHED" } | void> {
   const supabase = await createClient();
   const {
@@ -68,6 +69,7 @@ export async function startPracticeSession(
       status: "in_progress",
       total_questions: questionIds.length,
       question_ids: questionIds,
+      timed_mode: timedMode,
     })
     .select("id")
     .single();
@@ -83,7 +85,8 @@ export async function saveAnswer(
   sessionId: string,
   questionId: string,
   chosenChoice: Choice,
-  correctChoice: Choice
+  correctChoice: Choice,
+  timeSpentMs: number | null = null
 ) {
   const supabase = await createClient();
   const {
@@ -96,6 +99,7 @@ export async function saveAnswer(
     question_id: questionId,
     chosen_choice: chosenChoice,
     is_correct: chosenChoice === correctChoice,
+    time_spent_ms: timeSpentMs,
   });
 }
 
