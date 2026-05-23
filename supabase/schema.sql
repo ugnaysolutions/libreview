@@ -102,7 +102,7 @@ CREATE TRIGGER user_profiles_updated_at
 CREATE TABLE exam_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
-  session_type TEXT NOT NULL CHECK (session_type IN ('topic_practice', 'mock_exam')),
+  session_type TEXT NOT NULL CHECK (session_type IN ('topic_practice', 'mock_exam', 'adaptive_drill')),
   topic_id UUID REFERENCES topics(id),
   status exam_status DEFAULT 'in_progress',
   total_questions INTEGER NOT NULL,
