@@ -43,6 +43,7 @@ export async function createQuestion(
       explanation: formData.get("explanation") as string,
       difficulty: Number(formData.get("difficulty")) || 1,
       status: (formData.get("status") as QuestionStatus) || "draft",
+      is_premium: formData.get("is_premium") !== "false",
       created_by: userId,
     });
     if (error) return { success: false, error: error.message };
@@ -72,6 +73,7 @@ export async function updateQuestion(
         explanation: formData.get("explanation") as string,
         difficulty: Number(formData.get("difficulty")) || 1,
         status: formData.get("status") as QuestionStatus,
+        is_premium: formData.get("is_premium") !== "false",
         reviewed_by: userId,
         reviewed_at: new Date().toISOString(),
       })

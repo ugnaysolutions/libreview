@@ -22,12 +22,17 @@ export async function startPracticeSession(
     return { error: "DAILY_LIMIT_REACHED" };
   }
 
-  const { data: questions } = await supabase
+  const userIsPremium = await isPremium(user.id);
+
+  let questionsQuery = supabase
     .from("questions")
     .select("id, passage_id, passage_order")
     .eq("topic_id", topicId)
-    .eq("status", "approved")
-    .limit(50);
+    .eq("status", "approved");
+
+  if (!userIsPremium) questionsQuery = questionsQuery.eq("is_premium", false);
+
+  const { data: questions } = await questionsQuery.limit(50);
 
   if (!questions || questions.length === 0) {
     throw new Error("No questions available for this topic");

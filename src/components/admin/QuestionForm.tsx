@@ -34,6 +34,7 @@ interface QuestionData {
   explanation: string;
   difficulty: number;
   status: QuestionStatus;
+  is_premium: boolean;
 }
 
 interface Props {
@@ -68,6 +69,9 @@ export function QuestionForm({ subtests, question }: Props) {
   const [status, setStatus] = useState<QuestionStatus>(
     question?.status ?? "draft"
   );
+  const [questionIsPremium, setQuestionIsPremium] = useState(
+    question?.is_premium ?? true
+  );
 
   const topics = (
     subtests.find((s) => s.id === subtestId)?.topics ?? []
@@ -86,6 +90,7 @@ export function QuestionForm({ subtests, question }: Props) {
     formData.set("correct_choice", correctChoice);
     formData.set("difficulty", difficulty);
     formData.set("status", status);
+    formData.set("is_premium", String(questionIsPremium));
 
     startTransition(async () => {
       const result = question
@@ -243,6 +248,18 @@ export function QuestionForm({ subtests, question }: Props) {
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
             </select>
+          </div>
+          <div>
+            <label className={labelCls}>Access</label>
+            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={questionIsPremium}
+                onChange={(e) => setQuestionIsPremium(e.target.checked)}
+                className="accent-primary h-4 w-4"
+              />
+              <span className="text-sm">Premium only</span>
+            </label>
           </div>
         </CardContent>
       </Card>

@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { SCHOOL_EXAMS, FILIPINO_TOPIC_SLUGS } from "@/lib/constants";
-import { canStartMockExam } from "@/lib/plan";
+import { canStartMockExam, isPremium } from "@/lib/plan";
 import type { ExamType } from "@/lib/constants";
 
 type Q = { id: string; topic_id: string; passage_id: string | null; passage_order: number | null };
@@ -117,12 +117,17 @@ export async function startMockExamSession(
   // Deduplicate topic IDs before querying
   const uniqueTopicIds = [...new Set(allTopicIds)];
 
-  const { data: allQuestions } = await supabase
+  const userIsPremium = await isPremium(user.id);
+
+  let questionsQuery = supabase
     .from("questions")
     .select("id, topic_id, passage_id, passage_order")
     .in("topic_id", uniqueTopicIds)
-    .eq("status", "approved")
-    .limit(examConfig.totalItems * 8);
+    .eq("status", "approved");
+
+  if (!userIsPremium) questionsQuery = questionsQuery.eq("is_premium", false);
+
+  const { data: allQuestions } = await questionsQuery.limit(examConfig.totalItems * 8);
 
   if (!allQuestions || allQuestions.length === 0) throw new Error("No questions available");
 

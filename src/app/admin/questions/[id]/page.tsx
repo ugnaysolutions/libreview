@@ -16,7 +16,7 @@ export default async function EditQuestionPage({
     supabase
       .from("questions")
       .select(
-        "id, topic_id, question_text, image_url, choice_a, choice_b, choice_c, choice_d, correct_choice, explanation, difficulty, status"
+        "id, topic_id, question_text, image_url, choice_a, choice_b, choice_c, choice_d, correct_choice, explanation, difficulty, status, is_premium"
       )
       .eq("id", id)
       .single(),
