@@ -20,7 +20,7 @@ export default async function OnboardingPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold font-heading text-foreground">
-            Welcome to Libreview!
+            Welcome to LibreviewPH!
           </h1>
           <p className="text-muted-foreground text-sm">
             Let&apos;s set up your study profile.

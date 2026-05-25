@@ -1,4 +1,4 @@
-export const APP_NAME = "Libreview";
+export const APP_NAME = "LibreviewPH";
 export const APP_TAGLINE = "Your free path to your dream university.";
 
 export const COLORS = {

@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
         attributes: {
           line_items: [
             {
-              name: `Libreview Premium – ${planLabel}`,
+              name: `LibreviewPH Premium – ${planLabel}`,
               quantity: 1,
               amount: amountCents,
               currency: "PHP",
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
           payment_method_types: ["gcash", "paymaya", "card"],
           success_url: `${origin}/upgrade/success`,
           cancel_url: `${origin}/upgrade`,
-          description: `Libreview Premium — ${duration} of unlimited access`,
+          description: `LibreviewPH Premium — ${duration} of unlimited access`,
           send_email_receipt: true,
           show_description: true,
           show_line_items: true,

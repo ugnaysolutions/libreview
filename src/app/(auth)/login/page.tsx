@@ -3,9 +3,9 @@ import { LoginButton } from "./LoginButton";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "Libreview — Free College Entrance Test Reviewer",
+  title: "LibreviewPH — Free College Entrance Test Reviewer",
   description:
-    "Prepare for your college entrance test with Libreview — a free, no-ads reviewer for Filipino Grade 12 students. Practice by topic, take mock exams, and track your progress.",
+    "Prepare for your college entrance test with LibreviewPH — a free, no-ads reviewer for Filipino Grade 12 students. Practice by topic, take mock exams, and track your progress.",
 };
 
 export default async function LoginPage({

@@ -26,7 +26,7 @@ export function ShareScoreButton({
       try {
         const response = await fetch(imageUrl);
         const blob = await response.blob();
-        const file = new File([blob], "libreview-score.png", {
+        const file = new File([blob], "libreviewph-score.png", {
           type: "image/png",
         });
 
@@ -37,14 +37,14 @@ export function ShareScoreButton({
         ) {
           await navigator.share({
             files: [file],
-            title: `I scored ${score}% on Libreview!`,
+            title: `I scored ${score}% on LibreviewPH!`,
             text: `${label} · ${correct}/${total} correct\nPractice free at libreview.ph`,
           });
         } else {
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = "libreview-score.png";
+          a.download = "libreviewph-score.png";
           a.click();
           URL.revokeObjectURL(url);
         }

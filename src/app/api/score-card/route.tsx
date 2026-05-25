@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
             fontWeight: 700,
           }}
         >
-          📚 Libreview
+          📚 LibreviewPH
         </div>
 
         {/* Score block */}
