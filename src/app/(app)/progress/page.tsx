@@ -438,7 +438,7 @@ export default async function ProgressPage() {
                 return (
                   <Link
                     key={subtest.id}
-                    href={`/practice/${subtest.slug}`}
+                    href={`/progress/${subtest.slug}`}
                     className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
                   >
                     <Icon className={cn("h-4 w-4 shrink-0", meta?.color ?? "text-primary")} />
