@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, XCircle, Bookmark, Brain } from "lucide-react";
+import { CheckCircle2, XCircle, Bookmark, Brain, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import type { Choice } from "@/lib/supabase/types";
 import { BookmarkButton } from "@/components/ui/BookmarkButton";
 import { ShareScoreButton } from "@/components/ui/ShareScoreButton";
 import { SmartDrillCard } from "@/components/ui/SmartDrillCard";
+import { isPremium } from "@/lib/plan";
 
 export default async function AdaptiveResultsPage({
   searchParams,
@@ -39,7 +40,7 @@ export default async function AdaptiveResultsPage({
 
   const questionIds = (session as { question_ids: string[] }).question_ids ?? [];
 
-  const [questionsRes, answersRes, bookmarksRes] = await Promise.all([
+  const [questionsRes, answersRes, bookmarksRes, premium] = await Promise.all([
     supabase
       .from("questions")
       .select(
@@ -55,6 +56,7 @@ export default async function AdaptiveResultsPage({
       .select("question_id")
       .eq("user_id", user.id)
       .in("question_id", questionIds),
+    isPremium(user.id),
   ]);
 
   const questionsRaw = questionsRes.data ?? [];
@@ -214,7 +216,7 @@ export default async function AdaptiveResultsPage({
                     })}
                   </div>
 
-                  {q.explanation && (
+                  {q.explanation && premium && (
                     <div className="bg-muted/50 rounded-xl p-3">
                       <p className="text-xs font-semibold text-muted-foreground mb-1">
                         Explanation
@@ -223,6 +225,20 @@ export default async function AdaptiveResultsPage({
                         {q.explanation}
                       </p>
                     </div>
+                  )}
+                  {q.explanation && !premium && (
+                    <Link
+                      href="/upgrade"
+                      className="flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2"
+                    >
+                      <p className="text-xs text-amber-700">
+                        See explanation with Premium
+                      </p>
+                      <span className="flex items-center gap-1 text-xs font-semibold text-amber-600 shrink-0">
+                        <Zap className="h-3 w-3" />
+                        Upgrade
+                      </span>
+                    </Link>
                   )}
                 </CardContent>
               </Card>
