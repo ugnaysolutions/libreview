@@ -332,7 +332,7 @@ export default async function ProgressPage() {
                 Score Predictor
               </p>
               <p className="text-xs text-muted-foreground">
-                See your projected UPCAT score
+                See your projected score
               </p>
             </div>
           </div>

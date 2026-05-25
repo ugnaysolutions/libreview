@@ -16,7 +16,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Libreview — Your free path to UP and beyond.",
+  title: "Libreview - Your free path to your dream U",
   description:
     "Free UPCAT reviewer for Filipino Grade 12 students. No ads. No paywalls.",
 };
