@@ -411,136 +411,54 @@ export default async function ProgressPage() {
       {/* ── Subtest breakdown ───────────────────────────────────── */}
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">By Subject</h2>
-        {subtests.map((subtest) => {
-          const topics = (
-            subtest.topics as unknown as {
-              id: string;
-              name: string;
-              slug: string;
-              display_order: number | null;
-            }[]
-          ).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+        <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {subtests.map((subtest) => {
+                const topics = subtest.topics as unknown as {
+                  id: string;
+                  name: string;
+                  slug: string;
+                  display_order: number | null;
+                }[];
+                const practicedTopics = topics.filter((t) => {
+                  const p = progressMap.get(t.id);
+                  return p && p.total_attempts > 0;
+                });
+                const latestTopic = [...practicedTopics].sort((a, b) => {
+                  const ta = progressMap.get(a.id)?.last_practiced_at ?? "";
+                  const tb = progressMap.get(b.id)?.last_practiced_at ?? "";
+                  return tb.localeCompare(ta);
+                })[0] ?? null;
+                const meta = SUBTEST_META[subtest.slug];
+                const Icon = meta?.icon ?? BookOpen;
+                const p = latestTopic ? progressMap.get(latestTopic.id) : null;
+                const accuracy = p ? Math.round(Number(p.accuracy_percentage)) : null;
 
-          const practicedTopics = topics.filter((t) => {
-            const p = progressMap.get(t.id);
-            return p && p.total_attempts > 0;
-          });
-          const latestTopic = [...practicedTopics].sort((a, b) => {
-            const ta = progressMap.get(a.id)?.last_practiced_at ?? "";
-            const tb = progressMap.get(b.id)?.last_practiced_at ?? "";
-            return tb.localeCompare(ta);
-          })[0] ?? null;
-          const morePracticedCount = practicedTopics.length - (latestTopic ? 1 : 0);
-          const notStartedCount = topics.length - practicedTopics.length;
-          const attempted = practicedTopics.map((t) => progressMap.get(t.id)!);
-          const subtestAccuracy =
-            attempted.length > 0
-              ? Math.round(
-                  attempted.reduce(
-                    (s, p) => s + Number(p.accuracy_percentage),
-                    0
-                  ) / attempted.length
-                )
-              : 0;
-
-          const meta = SUBTEST_META[subtest.slug];
-          const Icon = meta?.icon ?? BookOpen;
-
-          return (
-            <Card
-              key={subtest.id}
-              className="rounded-2xl border-border shadow-sm overflow-hidden"
-            >
-              <CardContent className="p-0">
-                {/* Subtest header */}
-                <div className="flex items-center gap-4 p-4 border-b border-border">
-                  <AccuracyRing
-                    accuracy={subtestAccuracy}
-                    size={56}
-                    strokeWidth={5}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <Icon
-                        className={cn("h-4 w-4", meta?.color ?? "text-primary")}
-                      />
+                return (
+                  <Link
+                    key={subtest.id}
+                    href={`/practice/${subtest.slug}`}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+                  >
+                    <Icon className={cn("h-4 w-4 shrink-0", meta?.color ?? "text-primary")} />
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground">
                         {subtest.name}
                       </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {attempted.length} of {topics.length} topics started
-                    </p>
-                  </div>
-                </div>
-
-                {/* Most recently practiced topic */}
-                <div className="divide-y divide-border">
-                  {latestTopic === null ? (
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <p className="text-xs text-muted-foreground">
-                        No topics practiced yet
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {latestTopic
+                          ? `${latestTopic.name} · ${accuracy}%`
+                          : "Not started yet"}
                       </p>
-                      <Link
-                        href={`/practice/${subtest.slug}`}
-                        className="text-xs font-medium text-primary flex items-center gap-0.5"
-                      >
-                        Explore
-                        <ChevronRight className="h-3 w-3" />
-                      </Link>
                     </div>
-                  ) : (() => {
-                    const p = progressMap.get(latestTopic.id)!;
-                    const accuracy = Math.round(Number(p.accuracy_percentage));
-                    const lastPracticed = p.last_practiced_at
-                      ? format(parseISO(p.last_practiced_at), "MMM d")
-                      : null;
-                    const lvl = getBadgeLevel(accuracy, true);
-                    return (
-                      <Link
-                        href={`/practice/${subtest.slug}/${latestTopic.slug}`}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
-                      >
-                        <AccuracyRing accuracy={accuracy} size={40} strokeWidth={4} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1">
-                            <p className="text-xs font-medium text-foreground truncate">
-                              {latestTopic.name}
-                            </p>
-                            {lvl && <TopicBadge level={lvl} size={12} />}
-                          </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            {p.total_attempts} answered{lastPracticed ? ` · ${lastPracticed}` : ""}
-                          </p>
-                        </div>
-                        <p className="text-xs font-semibold text-foreground shrink-0">
-                          {accuracy}%
-                        </p>
-                      </Link>
-                    );
-                  })()}
-                </div>
-                {/* Footer: more practiced + not started */}
-                {(morePracticedCount > 0 || (notStartedCount > 0 && latestTopic !== null)) && (
-                  <div className="border-t border-border px-4 py-2.5 flex items-center justify-between">
-                    <p className="text-[11px] text-muted-foreground">
-                      {morePracticedCount > 0
-                        ? `+${morePracticedCount} more practiced`
-                        : `+${notStartedCount} topic${notStartedCount > 1 ? "s" : ""} not started`}
-                    </p>
-                    <Link
-                      href={`/practice/${subtest.slug}`}
-                      className="text-[11px] font-medium text-primary flex items-center gap-0.5"
-                    >
-                      Explore
-                      <ChevronRight className="h-3 w-3" />
-                    </Link>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </Link>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       {/* ── Session history ─────────────────────────────────────── */}
