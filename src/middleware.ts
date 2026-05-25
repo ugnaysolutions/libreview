@@ -37,6 +37,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/mock-exam") ||
     pathname.startsWith("/resources") ||
     pathname.startsWith("/progress") ||
+    pathname.startsWith("/daily-challenge") ||
     pathname.startsWith("/onboarding") ||
     pathname.startsWith("/admin");
 
