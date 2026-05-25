@@ -74,8 +74,8 @@ export const SCHOOL_EXAMS = {
     },
   },
   dlsu: {
-    name: "DLSUCET",
-    fullName: "De La Salle University College Entrance Test",
+    name: "DCAT",
+    fullName: "De La Salle College Admissions Test",
     description: "Math · Science · Language/Reading · Reasoning · 60 items · 60 min",
     totalTimeSeconds: 3600,
     totalItems: 60,

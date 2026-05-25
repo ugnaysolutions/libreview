@@ -14,7 +14,7 @@ const premiumFeatures = [
   "10,000+ exam questions",
   "Unlimited mock exams per day",
   "Full wrong-answer review with explanations",
-  "ACET, DLSUCET & USTET mock exams",
+  "ACET, DCAT & USTET mock exams",
   "Reasoning subject (Logic, Numerical, Verbal & more)",
   "Advanced progress analytics",
   "Adaptive weak-topic drills",

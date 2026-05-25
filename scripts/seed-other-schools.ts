@@ -1,5 +1,5 @@
 /**
- * Seeds subtests, topics, and questions for ACET, DLSUCET, and USTET.
+ * Seeds subtests, topics, and questions for ACET, DCAT, and USTET.
  * Run: npx ts-node --project tsconfig.seed.json scripts/seed-other-schools.ts
  */
 
@@ -1566,7 +1566,7 @@ const QUESTIONS: Record<string, Q[]> = {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("Seeding other school exams (ACET, DLSUCET, USTET)...\n");
+  console.log("Seeding other school exams (ACET, DCAT, USTET)...\n");
 
   // Build subtest slug → id map
   const subtestIdMap: Record<string, string> = {};

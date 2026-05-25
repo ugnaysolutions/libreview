@@ -26,7 +26,7 @@ export default function UpgradeSuccessPage() {
           <li>• Unlimited practice sessions per day</li>
           <li>• Unlimited mock exams per day</li>
           <li>• Full wrong-answer review with explanations</li>
-          <li>• Access to ACET, DLSUCET &amp; USTET exams</li>
+          <li>• Access to ACET, DCAT &amp; USTET exams</li>
         </ul>
       </div>
 
