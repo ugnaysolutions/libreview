@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, BookMarked, FlaskConical, Calculator, ChevronRight } from "lucide-react";
+import { BookOpen, BookMarked, FlaskConical, Calculator, Brain, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const SUBTEST_META: Record<string, { icon: React.ReactNode; color: string }> = {
@@ -20,6 +20,10 @@ const SUBTEST_META: Record<string, { icon: React.ReactNode; color: string }> = {
   mathematics: {
     icon: <Calculator className="h-5 w-5 text-amber-500" />,
     color: "bg-amber-50",
+  },
+  reasoning: {
+    icon: <Brain className="h-5 w-5 text-rose-500" />,
+    color: "bg-rose-50",
   },
 };
 
