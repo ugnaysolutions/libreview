@@ -13,7 +13,7 @@ Known breaking changes already encountered:
 
 ## Git workflow
 
-**After every meaningful unit of work, commit and push.** Never leave work uncommitted at the end of a session. This ensures the project can always be reverted to a known-good state.
+**Commit and push to GitHub after every meaningful unit of work — do not wait until the end of a session.** This is non-negotiable. Every feature, fix, or refactor should be committed and pushed as soon as it is complete and builds cleanly. Never accumulate multiple unrelated changes before pushing. This ensures work is never lost and the repo on GitHub always reflects the current state.
 
 ```bash
 git add <files>
