@@ -1,11 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { FREE_PLAN } from "@/lib/constants";
 import { unstable_cache } from "next/cache";
 
 export function isPremium(userId: string): Promise<boolean> {
   return unstable_cache(
     async () => {
-      const supabase = await createClient();
+      // Must use admin client here — unstable_cache runs outside request
+      // context so cookies() (used by createClient) is not available.
+      const supabase = createAdminClient();
       const { data } = await supabase
         .from("user_profiles")
         .select("plan, plan_expires_at")
