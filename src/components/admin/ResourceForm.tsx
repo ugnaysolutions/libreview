@@ -85,7 +85,6 @@ export function ResourceForm({ subtests, resource }: Props) {
       if (result.success) {
         toast.success(resource ? "Resource updated." : "Resource created.");
         router.push("/admin/resources");
-        router.refresh();
       } else {
         toast.error(result.error);
       }
