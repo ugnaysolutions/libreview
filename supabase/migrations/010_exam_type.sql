@@ -1,0 +1,2 @@
+ALTER TABLE exam_sessions
+  ADD COLUMN IF NOT EXISTS exam_type TEXT NOT NULL DEFAULT 'upcat';

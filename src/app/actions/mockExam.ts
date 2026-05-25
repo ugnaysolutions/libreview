@@ -95,6 +95,7 @@ export async function startMockExamSession(
     .insert({
       user_id: user.id,
       session_type: "mock_exam",
+      exam_type: examType,
       status: "in_progress",
       total_questions: allQuestionIds.length,
       question_ids: allQuestionIds,

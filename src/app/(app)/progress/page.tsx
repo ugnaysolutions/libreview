@@ -22,6 +22,7 @@ import { TopicBadge, getBadgeLevel, badgeLabel, type BadgeLevel } from "@/compon
 import { isPremium } from "@/lib/plan";
 import { MOCK_EXAM } from "@/lib/constants";
 import { PROGRESS_TAGLINES, pickRandom } from "@/lib/taglines";
+import { MockExamTrend } from "@/components/MockExamTrend";
 
 const SUBTEST_META: Record<
   string,
@@ -43,7 +44,7 @@ export default async function ProgressPage() {
   const today = new Date();
   const thirtyDaysAgo = subDays(today, 29);
 
-  const [profileRes, subtestsRes, progressRes, historyRes, calendarRes, premium] =
+  const [profileRes, subtestsRes, progressRes, historyRes, calendarRes, mockSessionsRes, premium] =
     await Promise.all([
       supabase
         .from("user_profiles")
@@ -78,6 +79,13 @@ export default async function ProgressPage() {
         .eq("user_id", user.id)
         .eq("status", "completed")
         .gte("started_at", thirtyDaysAgo.toISOString()),
+      supabase
+        .from("exam_sessions")
+        .select("id, exam_type, correct_count, total_questions, completed_at, time_spent_seconds")
+        .eq("user_id", user.id)
+        .eq("session_type", "mock_exam")
+        .eq("status", "completed")
+        .order("completed_at", { ascending: true }),
       isPremium(user.id),
     ]);
 
@@ -86,6 +94,7 @@ export default async function ProgressPage() {
   const progress = progressRes.data ?? [];
   const history = historyRes.data ?? [];
   const calendarSessions = calendarRes.data ?? [];
+  const mockSessions = mockSessionsRes.data ?? [];
 
   // Overall stats
   const totalAttempts = progress.reduce((s, p) => s + p.total_attempts, 0);
@@ -408,6 +417,14 @@ export default async function ProgressPage() {
           </Card>
         </section>
       )}
+
+      {/* ── Mock Exam History ───────────────────────────────────── */}
+      <section className="space-y-3">
+        <h2 className="text-base font-bold font-heading text-foreground">
+          Mock Exam History
+        </h2>
+        <MockExamTrend sessions={mockSessions} />
+      </section>
 
       {/* ── Subtest breakdown ───────────────────────────────────── */}
       <section className="space-y-3">
