@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { TopicBadge, getBadgeLevel, badgeLabel, type BadgeLevel } from "@/components/ui/TopicBadge";
 import { isPremium } from "@/lib/plan";
 import { MOCK_EXAM } from "@/lib/constants";
+import { PROGRESS_TAGLINES, pickRandom } from "@/lib/taglines";
 
 const SUBTEST_META: Record<
   string,
@@ -168,6 +169,8 @@ export default async function ProgressPage() {
   const predictedLow = Math.max(0, predictedTotal - 3);
   const predictedHigh = Math.min(MOCK_EXAM.totalItems, predictedTotal + 3);
 
+  const tagline = pickRandom(PROGRESS_TAGLINES);
+
   // Build 30-day calendar grid
   const sessionDates = new Set(
     calendarSessions.map((s) => s.started_at.split("T")[0])
@@ -189,7 +192,7 @@ export default async function ProgressPage() {
           Progress
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Track your UPCAT preparation
+          {tagline}
         </p>
       </div>
 

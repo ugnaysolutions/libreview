@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { DASHBOARD_TAGLINES, pickRandom } from "@/lib/taglines";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { differenceInCalendarDays, format, parseISO } from "date-fns";
@@ -174,6 +175,7 @@ export default async function DashboardPage() {
     : null;
 
   const displayName = profile.full_name?.split(" ")[0] ?? "there";
+  const tagline = pickRandom(DASHBOARD_TAGLINES);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
@@ -183,7 +185,7 @@ export default async function DashboardPage() {
           Hi, {displayName}! 👋
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Ready to review for your dream U?
+          {tagline}
         </p>
       </div>
 
