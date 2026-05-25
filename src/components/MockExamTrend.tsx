@@ -30,7 +30,7 @@ interface Props {
   sessions: Session[];
 }
 
-const EXAM_ORDER: ExamType[] = ["upcat", "acet", "dlsu", "ust"];
+const EXAM_ORDER: ExamType[] = ["upcat", "acet", "dlsu", "ust", "dost"];
 
 function toScore(s: Session) {
   return s.total_questions > 0

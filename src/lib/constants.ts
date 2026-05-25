@@ -101,6 +101,20 @@ export const SCHOOL_EXAMS = {
       reasoning: 9,
     },
   },
+  dost: {
+    name: "DOST-SEI",
+    fullName: "DOST-SEI S&T Undergraduate Scholarship Exam",
+    description: "English · Science · Math · Reasoning · 60 items · 130 min",
+    totalTimeSeconds: 7800,
+    totalItems: 60,
+    subtestItemCounts: {
+      "language-proficiency": 12,
+      "reading-comprehension": 12,
+      science: 12,
+      mathematics: 12,
+      reasoning: 12,
+    },
+  },
 } as const;
 
 export type ExamType = keyof typeof SCHOOL_EXAMS;

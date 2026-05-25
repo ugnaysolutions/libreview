@@ -10,7 +10,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ExamType } from "@/lib/constants";
 
-const SCHOOL_ORDER: ExamType[] = ["upcat", "acet", "dlsu", "ust"];
+const SCHOOL_ORDER: ExamType[] = ["upcat", "acet", "dlsu", "ust", "dost"];
 
 function isValidExamType(val: string | undefined): val is ExamType {
   return !!val && val in SCHOOL_EXAMS;
@@ -175,7 +175,9 @@ export default async function MockExamPage({
               <Clock className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">60 Minutes</p>
+              <p className="text-sm font-semibold text-foreground">
+                {Math.round(examConfig.totalTimeSeconds / 60)} Minutes
+              </p>
               <p className="text-xs text-muted-foreground">Timed exam</p>
             </div>
           </CardContent>
