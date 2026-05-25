@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,11 +37,12 @@ export function BottomNav({ user, isPremium }: { user: User; isPremium?: boolean
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/60">
         <div className="flex items-center gap-2 min-w-0">
           {user.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={user.avatarUrl}
               alt={user.name}
-              className="h-7 w-7 rounded-full shrink-0 object-cover"
+              width={28}
+              height={28}
+              className="rounded-full shrink-0 object-cover"
             />
           ) : (
             <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center shrink-0">

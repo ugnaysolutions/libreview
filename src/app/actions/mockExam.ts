@@ -30,62 +30,81 @@ export async function startMockExamSession(
 
   if (!subtests || subtests.length === 0) throw new Error("No subtests found");
 
-  // For each subtest, fetch and shuffle approved questions in parallel
-  const subtestQuestions = await Promise.all(
-    subtests.map(async (subtest) => {
-      const itemCount =
-        examConfig.subtestItemCounts[
-          subtest.slug as keyof typeof examConfig.subtestItemCounts
-        ];
-      if (!itemCount) return [];
+  // Build per-subtest config and collect all eligible topic IDs in one pass
+  type Q = { id: string; topic_id: string; passage_id: string | null; passage_order: number | null };
+  type SubtestConfig = { itemCount: number; topicIds: string[] };
+  const subtestConfigs: SubtestConfig[] = [];
+  const allTopicIds: string[] = [];
 
-      // Exclude Filipino topics for non-UPCAT exams
-      const allTopics = subtest.topics as { id: string; slug: string }[];
-      const topicIds =
-        examType === "upcat"
-          ? allTopics.map((t) => t.id)
-          : allTopics
-              .filter((t) => !FILIPINO_TOPIC_SLUGS.includes(t.slug))
-              .map((t) => t.id);
-      if (topicIds.length === 0) return [];
+  for (const subtest of subtests) {
+    const itemCount =
+      examConfig.subtestItemCounts[
+        subtest.slug as keyof typeof examConfig.subtestItemCounts
+      ];
+    if (!itemCount) continue;
 
-      const { data: questions } = await supabase
-        .from("questions")
-        .select("id, passage_id, passage_order")
-        .in("topic_id", topicIds)
-        .eq("status", "approved")
-        .limit(itemCount * 5);
+    const allTopics = subtest.topics as { id: string; slug: string }[];
+    const topicIds =
+      examType === "upcat"
+        ? allTopics.map((t) => t.id)
+        : allTopics
+            .filter((t) => !FILIPINO_TOPIC_SLUGS.includes(t.slug))
+            .map((t) => t.id);
+    if (topicIds.length === 0) continue;
 
-      if (!questions || questions.length === 0) return [];
+    subtestConfigs.push({ itemCount, topicIds });
+    allTopicIds.push(...topicIds);
+  }
 
-      // Group by passage; sort each group by passage_order ASC (parent = 1, children = 2+)
-      type Q = { id: string; passage_id: string | null; passage_order: number | null };
-      const groupMap = new Map<string, Q[]>();
-      for (const q of questions as Q[]) {
-        const key = q.passage_id ?? `solo-${q.id}`;
-        const g = groupMap.get(key) ?? [];
-        g.push(q);
-        groupMap.set(key, g);
+  // Single questions query for all subtests combined
+  const { data: allQuestions } = await supabase
+    .from("questions")
+    .select("id, topic_id, passage_id, passage_order")
+    .in("topic_id", allTopicIds)
+    .eq("status", "approved")
+    .limit(examConfig.totalItems * 8);
+
+  if (!allQuestions || allQuestions.length === 0) throw new Error("No questions available");
+
+  // Group fetched questions by topic_id for O(1) lookup
+  const questionsByTopic = new Map<string, Q[]>();
+  for (const q of allQuestions as Q[]) {
+    const arr = questionsByTopic.get(q.topic_id) ?? [];
+    arr.push(q);
+    questionsByTopic.set(q.topic_id, arr);
+  }
+
+  // Per-subtest shuffle using pre-fetched data (no additional DB calls)
+  const subtestQuestions = subtestConfigs.map(({ itemCount, topicIds }) => {
+    const questions = topicIds.flatMap((tid) => questionsByTopic.get(tid) ?? []);
+    if (questions.length === 0) return [];
+
+    // Group by passage; sort each group by passage_order ASC
+    const groupMap = new Map<string, Q[]>();
+    for (const q of questions) {
+      const key = q.passage_id ?? `solo-${q.id}`;
+      const g = groupMap.get(key) ?? [];
+      g.push(q);
+      groupMap.set(key, g);
+    }
+    for (const g of groupMap.values()) {
+      g.sort((a, b) => (a.passage_order ?? 0) - (b.passage_order ?? 0));
+    }
+
+    // Shuffle groups, greedily fill to itemCount; never include children without parent
+    const groups = [...groupMap.values()].sort(() => Math.random() - 0.5);
+    const ids: string[] = [];
+    for (const group of groups) {
+      if (ids.length >= itemCount) break;
+      const remaining = itemCount - ids.length;
+      if (group.length <= remaining) {
+        ids.push(...group.map((q) => q.id));
+      } else if (remaining >= 1) {
+        ids.push(group[0].id); // parent only as fallback
       }
-      for (const g of groupMap.values()) {
-        g.sort((a, b) => (a.passage_order ?? 0) - (b.passage_order ?? 0));
-      }
-
-      // Shuffle groups, greedily fill to itemCount; never include children without parent
-      const groups = [...groupMap.values()].sort(() => Math.random() - 0.5);
-      const ids: string[] = [];
-      for (const group of groups) {
-        if (ids.length >= itemCount) break;
-        const remaining = itemCount - ids.length;
-        if (group.length <= remaining) {
-          ids.push(...group.map((q) => q.id));
-        } else if (remaining >= 1) {
-          ids.push(group[0].id); // parent only as fallback
-        }
-      }
-      return ids;
-    })
-  );
+    }
+    return ids;
+  });
 
   const allQuestionIds = subtestQuestions.flat();
   if (allQuestionIds.length === 0) throw new Error("No questions available");

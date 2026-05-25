@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -70,11 +71,12 @@ export function Sidebar({ user, isPremium }: { user: User; isPremium?: boolean }
       <div className="border-t border-border px-4 py-4 space-y-3">
         <div className="flex items-center gap-3 min-w-0">
           {user.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={user.avatarUrl}
               alt={user.name}
-              className="h-9 w-9 rounded-full shrink-0 object-cover"
+              width={36}
+              height={36}
+              className="rounded-full shrink-0 object-cover"
             />
           ) : (
             <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center shrink-0">

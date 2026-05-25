@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { getCachedPracticeSubtests } from "@/lib/cached-queries";
 import Link from "next/link";
 import { BookOpen, BookMarked, FlaskConical, Calculator, Brain, ChevronRight, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,20 +25,14 @@ export default async function PracticePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [subtestsRes, progressRes, premium] = await Promise.all([
-    supabase
-      .from("subtests")
-      .select("id, name, slug, display_order, topics(id)")
-      .eq("exam_type", "upcat")
-      .order("display_order"),
+  const [subtests, progressRes, premium] = await Promise.all([
+    getCachedPracticeSubtests(),
     supabase
       .from("user_topic_progress")
       .select("topic_id, accuracy_percentage, total_attempts")
       .eq("user_id", user.id),
     isPremium(user.id),
   ]);
-
-  const subtests = subtestsRes.data ?? [];
   const progress = progressRes.data ?? [];
   const progressMap = new Map(progress.map((p) => [p.topic_id, p]));
   const hasHistory = progress.some((p) => p.total_attempts > 0);

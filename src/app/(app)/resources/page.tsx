@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { getCachedSubtestsWithResources } from "@/lib/cached-queries";
 import Link from "next/link";
 import { BookOpen, BookMarked, FlaskConical, Calculator, Brain, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,14 +35,9 @@ export default async function ResourcesPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: subtests } = await supabase
-    .from("subtests")
-    .select(
-      "id, name, slug, display_order, topics(id, resources(id, is_published))"
-    )
-    .order("display_order");
+  const subtests = await getCachedSubtestsWithResources();
 
-  const subtestData = (subtests ?? []).map((s) => {
+  const subtestData = subtests.map((s) => {
     const topics = (
       s.topics as unknown as {
         id: string;

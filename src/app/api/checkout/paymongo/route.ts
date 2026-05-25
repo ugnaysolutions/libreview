@@ -7,7 +7,24 @@ function getAuth() {
   return Buffer.from(`${process.env.PAYMONGO_SECRET_KEY!}:`).toString("base64");
 }
 
+// Simple per-IP rate limiter: 5 checkout attempts per minute
+const rateLimit = new Map<string, { count: number; reset: number }>();
+const WINDOW_MS = 60_000;
+const MAX_REQUESTS = 5;
+
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const now = Date.now();
+  const entry = rateLimit.get(ip);
+
+  if (entry && now < entry.reset) {
+    if (entry.count >= MAX_REQUESTS) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+    entry.count++;
+  } else {
+    rateLimit.set(ip, { count: 1, reset: now + WINDOW_MS });
+  }
   const supabase = await createClient();
   const {
     data: { user },
