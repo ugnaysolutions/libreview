@@ -77,7 +77,8 @@ export default async function DashboardPage() {
       supabase
         .from("user_topic_progress")
         .select("topic_id, accuracy_percentage, total_attempts, correct_attempts")
-        .eq("user_id", user.id),
+        .eq("user_id", user.id)
+        .limit(50),
       supabase
         .from("exam_sessions")
         .select(

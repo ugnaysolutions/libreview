@@ -27,7 +27,7 @@ export async function startPracticeSession(
     .select("id, passage_id, passage_order")
     .eq("topic_id", topicId)
     .eq("status", "approved")
-    .limit(200);
+    .limit(50);
 
   if (!questions || questions.length === 0) {
     throw new Error("No questions available for this topic");

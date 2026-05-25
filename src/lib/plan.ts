@@ -1,17 +1,24 @@
 import { createClient } from "@/lib/supabase/server";
 import { FREE_PLAN } from "@/lib/constants";
+import { unstable_cache } from "next/cache";
 
-export async function isPremium(userId: string): Promise<boolean> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("user_profiles")
-    .select("plan, plan_expires_at")
-    .eq("id", userId)
-    .single();
+export function isPremium(userId: string): Promise<boolean> {
+  return unstable_cache(
+    async () => {
+      const supabase = await createClient();
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("plan, plan_expires_at")
+        .eq("id", userId)
+        .single();
 
-  if (!data || data.plan !== "premium") return false;
-  if (!data.plan_expires_at) return true;
-  return new Date(data.plan_expires_at) > new Date();
+      if (!data || data.plan !== "premium") return false;
+      if (!data.plan_expires_at) return true;
+      return new Date(data.plan_expires_at) > new Date();
+    },
+    ["is-premium", userId],
+    { revalidate: 60, tags: [`premium-${userId}`] }
+  )();
 }
 
 function todayWindow() {

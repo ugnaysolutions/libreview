@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { revalidateTag } from "next/cache";
 
 export async function activatePremium(
   userId: string,
@@ -14,6 +15,7 @@ export async function activatePremium(
       plan_type: planType,
     })
     .eq("id", userId);
+  revalidateTag(`premium-${userId}`, "default");
 }
 
 export async function deactivatePremium(userId: string) {
@@ -22,4 +24,5 @@ export async function deactivatePremium(userId: string) {
     .from("user_profiles")
     .update({ plan: "free", plan_expires_at: null })
     .eq("id", userId);
+  revalidateTag(`premium-${userId}`, "default");
 }

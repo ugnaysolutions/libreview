@@ -63,7 +63,8 @@ export default async function ProgressPage() {
         .select(
           "topic_id, accuracy_percentage, total_attempts, correct_attempts, last_practiced_at"
         )
-        .eq("user_id", user.id),
+        .eq("user_id", user.id)
+        .limit(100),
       supabase
         .from("exam_sessions")
         .select(
