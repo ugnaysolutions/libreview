@@ -55,6 +55,7 @@ export default async function ProgressPage() {
         .select(
           "id, name, slug, display_order, topics(id, name, slug, display_order)"
         )
+        .in("slug", Object.keys(SUBTEST_META))
         .order("display_order"),
       supabase
         .from("user_topic_progress")
