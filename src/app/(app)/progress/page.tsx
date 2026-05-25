@@ -374,6 +374,40 @@ export default async function ProgressPage() {
         </Card>
       </section>
 
+      {/* ── Achievements ────────────────────────────────────────── */}
+      {achievements.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold text-foreground">
+            Achievements{" "}
+            <span className="text-muted-foreground font-normal text-sm">
+              ({achievements.length})
+            </span>
+          </h2>
+          <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
+                {achievements.map((a, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3">
+                    <TopicBadge level={a.level} size={20} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">
+                        {a.topicName}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {a.subtestName} · {badgeLabel(a.level)}
+                      </p>
+                    </div>
+                    <p className="text-xs font-semibold text-foreground shrink-0">
+                      {a.accuracy}%
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
       {/* ── Subtest breakdown ───────────────────────────────────── */}
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">By Subject</h2>
@@ -387,16 +421,16 @@ export default async function ProgressPage() {
             }[]
           ).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
-          const practicedTopics = topics
-            .filter((t) => {
-              const p = progressMap.get(t.id);
-              return p && p.total_attempts > 0;
-            })
-            .sort((a, b) => {
-              const pa = Number(progressMap.get(a.id)?.accuracy_percentage ?? 0);
-              const pb = Number(progressMap.get(b.id)?.accuracy_percentage ?? 0);
-              return pa - pb; // weakest first
-            });
+          const practicedTopics = topics.filter((t) => {
+            const p = progressMap.get(t.id);
+            return p && p.total_attempts > 0;
+          });
+          const latestTopic = [...practicedTopics].sort((a, b) => {
+            const ta = progressMap.get(a.id)?.last_practiced_at ?? "";
+            const tb = progressMap.get(b.id)?.last_practiced_at ?? "";
+            return tb.localeCompare(ta);
+          })[0] ?? null;
+          const morePracticedCount = practicedTopics.length - (latestTopic ? 1 : 0);
           const notStartedCount = topics.length - practicedTopics.length;
           const attempted = practicedTopics.map((t) => progressMap.get(t.id)!);
           const subtestAccuracy =
@@ -440,9 +474,9 @@ export default async function ProgressPage() {
                   </div>
                 </div>
 
-                {/* Topics list — practiced only, weakest first */}
+                {/* Most recently practiced topic */}
                 <div className="divide-y divide-border">
-                  {practicedTopics.length === 0 ? (
+                  {latestTopic === null ? (
                     <div className="flex items-center justify-between px-4 py-3">
                       <p className="text-xs text-muted-foreground">
                         No topics practiced yet
@@ -455,50 +489,44 @@ export default async function ProgressPage() {
                         <ChevronRight className="h-3 w-3" />
                       </Link>
                     </div>
-                  ) : (
-                    practicedTopics.map((topic) => {
-                      const p = progressMap.get(topic.id)!;
-                      const accuracy = Math.round(Number(p.accuracy_percentage));
-                      const lastPracticed = p.last_practiced_at
-                        ? format(parseISO(p.last_practiced_at), "MMM d")
-                        : null;
-                      const lvl = getBadgeLevel(accuracy, true);
-
-                      return (
-                        <Link
-                          key={topic.id}
-                          href={`/practice/${subtest.slug}/${topic.slug}`}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
-                        >
-                          <AccuracyRing
-                            accuracy={accuracy}
-                            size={40}
-                            strokeWidth={4}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1">
-                              <p className="text-xs font-medium text-foreground truncate">
-                                {topic.name}
-                              </p>
-                              {lvl && <TopicBadge level={lvl} size={12} />}
-                            </div>
-                            <p className="text-[11px] text-muted-foreground">
-                              {p.total_attempts} answered{lastPracticed ? ` · ${lastPracticed}` : ""}
+                  ) : (() => {
+                    const p = progressMap.get(latestTopic.id)!;
+                    const accuracy = Math.round(Number(p.accuracy_percentage));
+                    const lastPracticed = p.last_practiced_at
+                      ? format(parseISO(p.last_practiced_at), "MMM d")
+                      : null;
+                    const lvl = getBadgeLevel(accuracy, true);
+                    return (
+                      <Link
+                        href={`/practice/${subtest.slug}/${latestTopic.slug}`}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+                      >
+                        <AccuracyRing accuracy={accuracy} size={40} strokeWidth={4} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1">
+                            <p className="text-xs font-medium text-foreground truncate">
+                              {latestTopic.name}
                             </p>
+                            {lvl && <TopicBadge level={lvl} size={12} />}
                           </div>
-                          <p className="text-xs font-semibold text-foreground shrink-0">
-                            {accuracy}%
+                          <p className="text-[11px] text-muted-foreground">
+                            {p.total_attempts} answered{lastPracticed ? ` · ${lastPracticed}` : ""}
                           </p>
-                        </Link>
-                      );
-                    })
-                  )}
+                        </div>
+                        <p className="text-xs font-semibold text-foreground shrink-0">
+                          {accuracy}%
+                        </p>
+                      </Link>
+                    );
+                  })()}
                 </div>
-                {/* Not-started footer */}
-                {notStartedCount > 0 && practicedTopics.length > 0 && (
+                {/* Footer: more practiced + not started */}
+                {(morePracticedCount > 0 || (notStartedCount > 0 && latestTopic !== null)) && (
                   <div className="border-t border-border px-4 py-2.5 flex items-center justify-between">
                     <p className="text-[11px] text-muted-foreground">
-                      +{notStartedCount} topic{notStartedCount > 1 ? "s" : ""} not started
+                      {morePracticedCount > 0
+                        ? `+${morePracticedCount} more practiced`
+                        : `+${notStartedCount} topic${notStartedCount > 1 ? "s" : ""} not started`}
                     </p>
                     <Link
                       href={`/practice/${subtest.slug}`}
@@ -514,40 +542,6 @@ export default async function ProgressPage() {
           );
         })}
       </section>
-
-      {/* ── Achievements ────────────────────────────────────────── */}
-      {achievements.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-base font-semibold text-foreground">
-            Achievements{" "}
-            <span className="text-muted-foreground font-normal text-sm">
-              ({achievements.length})
-            </span>
-          </h2>
-          <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
-            <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {achievements.map((a, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3">
-                    <TopicBadge level={a.level} size={20} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-foreground truncate">
-                        {a.topicName}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {a.subtestName} · {badgeLabel(a.level)}
-                      </p>
-                    </div>
-                    <p className="text-xs font-semibold text-foreground shrink-0">
-                      {a.accuracy}%
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-      )}
 
       {/* ── Session history ─────────────────────────────────────── */}
       <section className="space-y-3">
