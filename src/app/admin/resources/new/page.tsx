@@ -2,12 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { ResourceForm } from "@/components/admin/ResourceForm";
+import { SUBTESTS } from "@/lib/constants";
 
 export default async function NewResourcePage() {
   const supabase = await createClient();
   const { data: subtests } = await supabase
     .from("subtests")
     .select("id, name, slug, display_order, topics(id, name, display_order)")
+    .in("slug", SUBTESTS.map((s) => s.slug))
     .order("display_order");
 
   const enriched = (subtests ?? []).map((s) => ({

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { ResourceForm } from "@/components/admin/ResourceForm";
+import { SUBTESTS } from "@/lib/constants";
 
 export default async function EditResourcePage({
   params,
@@ -23,6 +24,7 @@ export default async function EditResourcePage({
     supabase
       .from("subtests")
       .select("id, name, slug, display_order, topics(id, name, display_order)")
+      .in("slug", SUBTESTS.map((s) => s.slug))
       .order("display_order"),
   ]);
 

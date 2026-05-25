@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PublishToggle } from "@/components/admin/PublishToggle";
 import { DeleteResourceButton } from "@/components/admin/DeleteResourceButton";
 import { AutoSubmitSelect } from "@/components/admin/AutoSubmitSelect";
+import { SUBTESTS } from "@/lib/constants";
 
 export default async function AdminResourcesPage({
   searchParams,
@@ -19,6 +20,7 @@ export default async function AdminResourcesPage({
   const { data: subtests } = await supabase
     .from("subtests")
     .select("id, name, slug, display_order, topics(id, name)")
+    .in("slug", SUBTESTS.map((s) => s.slug))
     .order("display_order");
 
   let query = supabase
