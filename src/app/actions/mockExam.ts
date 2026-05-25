@@ -6,6 +6,44 @@ import { SCHOOL_EXAMS, FILIPINO_TOPIC_SLUGS } from "@/lib/constants";
 import { canStartMockExam } from "@/lib/plan";
 import type { ExamType } from "@/lib/constants";
 
+type Q = { id: string; topic_id: string; passage_id: string | null; passage_order: number | null };
+
+type SubtestConfig = {
+  itemCount: number;
+  topicIds: string[];
+  shortfallTopicIds?: string[];
+};
+
+/** Passage-aware shuffle: groups questions by passage, shuffles groups,
+ *  greedily fills up to itemCount. Skips questions already in usedIds. */
+function selectFromPool(available: Q[], itemCount: number, usedIds: Set<string>): string[] {
+  const filtered = available.filter((q) => !usedIds.has(q.id));
+
+  const groupMap = new Map<string, Q[]>();
+  for (const q of filtered) {
+    const key = q.passage_id ?? `solo-${q.id}`;
+    const g = groupMap.get(key) ?? [];
+    g.push(q);
+    groupMap.set(key, g);
+  }
+  for (const g of groupMap.values()) {
+    g.sort((a, b) => (a.passage_order ?? 0) - (b.passage_order ?? 0));
+  }
+
+  const groups = [...groupMap.values()].sort(() => Math.random() - 0.5);
+  const ids: string[] = [];
+  for (const group of groups) {
+    if (ids.length >= itemCount) break;
+    const remaining = itemCount - ids.length;
+    if (group.length <= remaining) {
+      ids.push(...group.map((q) => q.id));
+    } else if (remaining >= 1) {
+      ids.push(group[0].id);
+    }
+  }
+  return ids;
+}
+
 export async function startMockExamSession(
   examType: ExamType = "upcat"
 ): Promise<{ error: "DAILY_LIMIT_REACHED" } | void> {
@@ -22,7 +60,6 @@ export async function startMockExamSession(
   const examConfig = SCHOOL_EXAMS[examType];
   const subtestSlugs = Object.keys(examConfig.subtestItemCounts);
 
-  // Fetch shared subtests by slug — all exams draw from the same question bank
   const { data: subtests } = await supabase
     .from("subtests")
     .select("id, slug, topics(id, slug)")
@@ -30,9 +67,6 @@ export async function startMockExamSession(
 
   if (!subtests || subtests.length === 0) throw new Error("No subtests found");
 
-  // Build per-subtest config and collect all eligible topic IDs in one pass
-  type Q = { id: string; topic_id: string; passage_id: string | null; passage_order: number | null };
-  type SubtestConfig = { itemCount: number; topicIds: string[] };
   const subtestConfigs: SubtestConfig[] = [];
   const allTopicIds: string[] = [];
 
@@ -44,29 +78,54 @@ export async function startMockExamSession(
     if (!itemCount) continue;
 
     const allTopics = subtest.topics as { id: string; slug: string }[];
-    const topicIds =
-      examType === "upcat"
-        ? allTopics.map((t) => t.id)
-        : allTopics
-            .filter((t) => !FILIPINO_TOPIC_SLUGS.includes(t.slug))
-            .map((t) => t.id);
-    if (topicIds.length === 0) continue;
 
-    subtestConfigs.push({ itemCount, topicIds });
-    allTopicIds.push(...topicIds);
+    // UPCAT language-proficiency: split 25% Filipino / 75% other with fallback
+    if (examType === "upcat" && subtest.slug === "language-proficiency") {
+      const filipinoTopicIds = allTopics
+        .filter((t) => FILIPINO_TOPIC_SLUGS.includes(t.slug))
+        .map((t) => t.id);
+      const otherTopicIds = allTopics
+        .filter((t) => !FILIPINO_TOPIC_SLUGS.includes(t.slug))
+        .map((t) => t.id);
+      const filipinoTarget = Math.round(itemCount * 0.25); // 3
+
+      subtestConfigs.push({
+        itemCount: filipinoTarget,
+        topicIds: filipinoTopicIds,
+        shortfallTopicIds: otherTopicIds,
+      });
+      subtestConfigs.push({
+        itemCount: itemCount - filipinoTarget, // 9
+        topicIds: otherTopicIds,
+      });
+
+      allTopicIds.push(...filipinoTopicIds, ...otherTopicIds);
+    } else {
+      const topicIds =
+        examType === "upcat"
+          ? allTopics.map((t) => t.id)
+          : allTopics
+              .filter((t) => !FILIPINO_TOPIC_SLUGS.includes(t.slug))
+              .map((t) => t.id);
+      if (topicIds.length === 0) continue;
+
+      subtestConfigs.push({ itemCount, topicIds });
+      allTopicIds.push(...topicIds);
+    }
   }
 
-  // Single questions query for all subtests combined
+  // Deduplicate topic IDs before querying
+  const uniqueTopicIds = [...new Set(allTopicIds)];
+
   const { data: allQuestions } = await supabase
     .from("questions")
     .select("id, topic_id, passage_id, passage_order")
-    .in("topic_id", allTopicIds)
+    .in("topic_id", uniqueTopicIds)
     .eq("status", "approved")
     .limit(examConfig.totalItems * 8);
 
   if (!allQuestions || allQuestions.length === 0) throw new Error("No questions available");
 
-  // Group fetched questions by topic_id for O(1) lookup
   const questionsByTopic = new Map<string, Q[]>();
   for (const q of allQuestions as Q[]) {
     const arr = questionsByTopic.get(q.topic_id) ?? [];
@@ -74,37 +133,27 @@ export async function startMockExamSession(
     questionsByTopic.set(q.topic_id, arr);
   }
 
-  // Per-subtest shuffle using pre-fetched data (no additional DB calls)
-  const subtestQuestions = subtestConfigs.map(({ itemCount, topicIds }) => {
-    const questions = topicIds.flatMap((tid) => questionsByTopic.get(tid) ?? []);
-    if (questions.length === 0) return [];
+  // Build question IDs per subtest; global usedIds prevents cross-subtest duplicates
+  const usedIds = new Set<string>();
+  const subtestQuestions: string[][] = [];
 
-    // Group by passage; sort each group by passage_order ASC
-    const groupMap = new Map<string, Q[]>();
-    for (const q of questions) {
-      const key = q.passage_id ?? `solo-${q.id}`;
-      const g = groupMap.get(key) ?? [];
-      g.push(q);
-      groupMap.set(key, g);
-    }
-    for (const g of groupMap.values()) {
-      g.sort((a, b) => (a.passage_order ?? 0) - (b.passage_order ?? 0));
+  for (const { itemCount, topicIds, shortfallTopicIds } of subtestConfigs) {
+    const available = topicIds.flatMap((tid) => questionsByTopic.get(tid) ?? []);
+    const ids = selectFromPool(available, itemCount, usedIds);
+
+    // Backfill shortfall from fallback pool (e.g. Filipino → non-Filipino)
+    if (ids.length < itemCount && shortfallTopicIds) {
+      const shortfall = itemCount - ids.length;
+      const fallbackAvailable = shortfallTopicIds.flatMap(
+        (tid) => questionsByTopic.get(tid) ?? []
+      );
+      const extra = selectFromPool(fallbackAvailable, shortfall, usedIds);
+      ids.push(...extra);
     }
 
-    // Shuffle groups, greedily fill to itemCount; never include children without parent
-    const groups = [...groupMap.values()].sort(() => Math.random() - 0.5);
-    const ids: string[] = [];
-    for (const group of groups) {
-      if (ids.length >= itemCount) break;
-      const remaining = itemCount - ids.length;
-      if (group.length <= remaining) {
-        ids.push(...group.map((q) => q.id));
-      } else if (remaining >= 1) {
-        ids.push(group[0].id); // parent only as fallback
-      }
-    }
-    return ids;
-  });
+    ids.forEach((id) => usedIds.add(id));
+    subtestQuestions.push(ids);
+  }
 
   const allQuestionIds = subtestQuestions.flat();
   if (allQuestionIds.length === 0) throw new Error("No questions available");
@@ -167,7 +216,6 @@ export async function completeMockExamSession(
     })
     .eq("id", sessionId);
 
-  // Fetch questions to map question_id → topic_id
   const questionIds = (session as { question_ids: string[] }).question_ids ?? [];
   const { data: questions } = await supabase
     .from("questions")
@@ -176,7 +224,6 @@ export async function completeMockExamSession(
 
   if (!questions) return;
 
-  // Build per-topic stats from answers
   const answerMap = new Map(answers.map((a) => [a.question_id, a.is_correct]));
   const topicStats = new Map<string, { total: number; correct: number }>();
 
@@ -188,7 +235,6 @@ export async function completeMockExamSession(
     topicStats.set(q.topic_id, s);
   }
 
-  // Upsert user_topic_progress for every topic in the exam
   for (const [topicId, stats] of topicStats) {
     const { data: existing } = await supabase
       .from("user_topic_progress")
@@ -223,7 +269,6 @@ export async function completeMockExamSession(
     }
   }
 
-  // Streak logic
   const today = new Date().toISOString().split("T")[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
 
