@@ -3,8 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Resend } from "resend";
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -32,11 +32,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ sent: 0 });
   }
 
-  // Fetch emails from auth.users via admin API
+  // Batch-fetch emails from auth.users with a single listUsers call
+  const expiringIds = new Set(expiring.map((p) => p.id));
+  const { data: usersPage } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  const emailMap = new Map<string, string>(
+    (usersPage?.users ?? [])
+      .filter((u) => expiringIds.has(u.id) && !!u.email)
+      .map((u) => [u.id, u.email!])
+  );
+
   let sent = 0;
   for (const profile of expiring) {
-    const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
-    const email = authUser?.user?.email;
+    const email = emailMap.get(profile.id);
     if (!email) continue;
 
     const expiryDate = new Date(profile.plan_expires_at).toLocaleDateString("en-PH", {

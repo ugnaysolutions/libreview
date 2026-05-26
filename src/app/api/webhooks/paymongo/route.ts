@@ -25,12 +25,11 @@ export async function POST(req: NextRequest) {
   const sigHeader = req.headers.get("paymongo-signature");
 
   const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
-  if (webhookSecret) {
-    if (!sigHeader || !verifySignature(body, sigHeader, webhookSecret)) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
-    }
-  } else {
-    console.warn("PAYMONGO_WEBHOOK_SECRET not set — skipping signature verification");
+  if (!webhookSecret) {
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
+  }
+  if (!sigHeader || !verifySignature(body, sigHeader, webhookSecret)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
   const event = JSON.parse(body);

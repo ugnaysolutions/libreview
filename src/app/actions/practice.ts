@@ -90,7 +90,6 @@ export async function saveAnswer(
   sessionId: string,
   questionId: string,
   chosenChoice: Choice,
-  correctChoice: Choice,
   timeSpentMs: number | null = null
 ) {
   const supabase = await createClient();
@@ -99,11 +98,28 @@ export async function saveAnswer(
   } = await supabase.auth.getUser();
   if (!user) return;
 
+  // Verify session belongs to this user and fetch correct answer from DB
+  const [sessionRes, questionRes] = await Promise.all([
+    supabase
+      .from("exam_sessions")
+      .select("id")
+      .eq("id", sessionId)
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("questions")
+      .select("correct_choice")
+      .eq("id", questionId)
+      .single(),
+  ]);
+
+  if (!sessionRes.data || !questionRes.data) return;
+
   await supabase.from("session_answers").insert({
     session_id: sessionId,
     question_id: questionId,
     chosen_choice: chosenChoice,
-    is_correct: chosenChoice === correctChoice,
+    is_correct: chosenChoice === questionRes.data.correct_choice,
     time_spent_ms: timeSpentMs,
   });
 }

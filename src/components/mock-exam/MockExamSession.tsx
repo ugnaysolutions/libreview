@@ -166,7 +166,7 @@ export function MockExamSession({
     setSaving(true);
     setAnswers((prev) => new Set(prev).add(question.id));
     setSelectedChoices((prev) => ({ ...prev, [question.id]: choice }));
-    await saveAnswer(sessionId, question.id, choice, question.correct_choice);
+    await saveAnswer(sessionId, question.id, choice);
     setSaving(false);
   }
 

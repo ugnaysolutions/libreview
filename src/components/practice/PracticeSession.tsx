@@ -127,7 +127,6 @@ export function PracticeSession({
       sessionId,
       question.id,
       choice,
-      question.correct_choice,
       timedMode ? timeSpentMs : null
     );
     setLocalAnswers((prev) => new Set(prev).add(question.id));

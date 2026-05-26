@@ -67,7 +67,7 @@ export default async function DashboardPage() {
     [
       supabase
         .from("user_profiles")
-        .select("*, universities(name)")
+        .select("full_name, avatar_url, streak_count, last_session_date, target_exam_date, streak_freeze_used, streak_freeze_month, universities(name)")
         .eq("id", user.id)
         .single(),
       supabase

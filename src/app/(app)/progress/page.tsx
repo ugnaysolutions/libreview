@@ -44,7 +44,8 @@ export default async function ProgressPage() {
   const today = new Date();
   const thirtyDaysAgo = subDays(today, 29);
 
-  const [profileRes, subtestsRes, progressRes, historyRes, calendarRes, mockSessionsRes, premium] =
+  // Fetch subtests first to get topic IDs, then filter progress to only those topics
+  const [profileRes, subtestsRes, historyRes, calendarRes, mockSessionsRes, premium] =
     await Promise.all([
       supabase
         .from("user_profiles")
@@ -58,13 +59,6 @@ export default async function ProgressPage() {
         )
         .in("slug", Object.keys(SUBTEST_META))
         .order("display_order"),
-      supabase
-        .from("user_topic_progress")
-        .select(
-          "topic_id, accuracy_percentage, total_attempts, correct_attempts, last_practiced_at"
-        )
-        .eq("user_id", user.id)
-        .limit(100),
       supabase
         .from("exam_sessions")
         .select(
@@ -92,6 +86,19 @@ export default async function ProgressPage() {
 
   const profile = profileRes.data;
   const subtests = subtestsRes.data ?? [];
+
+  // Collect all topic IDs from the UPCAT subtests so we only fetch relevant progress rows
+  const relevantTopicIds = subtests.flatMap(
+    (s) => (s.topics as unknown as { id: string }[]).map((t) => t.id)
+  );
+  const progressRes = relevantTopicIds.length > 0
+    ? await supabase
+        .from("user_topic_progress")
+        .select("topic_id, accuracy_percentage, total_attempts, correct_attempts, last_practiced_at")
+        .eq("user_id", user.id)
+        .in("topic_id", relevantTopicIds)
+    : { data: [] };
+
   const progress = progressRes.data ?? [];
   const history = historyRes.data ?? [];
   const calendarSessions = calendarRes.data ?? [];
