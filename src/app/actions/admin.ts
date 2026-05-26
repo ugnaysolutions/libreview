@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import type { Choice, QuestionStatus } from "@/lib/supabase/types";
 import { activatePremium, deactivatePremium } from "@/lib/activatePremium";
 
@@ -49,6 +50,7 @@ export async function createQuestion(
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
@@ -81,6 +83,7 @@ export async function updateQuestion(
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
@@ -92,6 +95,7 @@ export async function deleteQuestion(id: string): Promise<ActionResult> {
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
@@ -112,6 +116,7 @@ export async function bulkApproveQuestions(
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
@@ -137,6 +142,7 @@ export async function createResource(
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
@@ -163,6 +169,7 @@ export async function updateResource(
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
@@ -174,6 +181,7 @@ export async function deleteResource(id: string): Promise<ActionResult> {
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
@@ -191,6 +199,7 @@ export async function toggleResourcePublished(
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
@@ -207,6 +216,7 @@ export async function resolveReport(id: string): Promise<ActionResult> {
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
@@ -220,6 +230,7 @@ export async function grantPremium(userId: string): Promise<ActionResult> {
     await activatePremium(userId, expiresAt, "monthly");
     return { success: true };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
@@ -230,6 +241,7 @@ export async function revokePremium(userId: string): Promise<ActionResult> {
     await deactivatePremium(userId);
     return { success: true };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
