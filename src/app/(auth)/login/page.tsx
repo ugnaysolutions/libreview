@@ -30,7 +30,7 @@ export default async function LoginPage({
             <p className="text-sm font-medium text-foreground">
               Free college entrance test reviewer.
             </p>
-            <p className="text-sm text-muted-foreground">No ads. No paywalls.</p>
+            <p className="text-sm text-muted-foreground">Start free. Go further with premium.</p>
           </div>
 
           {error === "auth" && (
