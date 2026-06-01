@@ -100,6 +100,11 @@ export function ManualPaymentForm({ plan, onPlanChange, hasPendingRequest }: Pro
         </p>
       </div>
 
+      {/* Coming soon notice */}
+      <p className="text-xs text-muted-foreground italic text-center">
+        💳 Bank transfer and card payments are on the way — thanks for bearing with us while we get them set up!
+      </p>
+
       {/* Reference number form */}
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="space-y-1.5">
