@@ -31,7 +31,10 @@ export async function GET(req: NextRequest) {
           flexDirection: "column",
           backgroundColor: bgColor,
           fontFamily: "sans-serif",
-          padding: "44px 60px",
+          paddingTop: 44,
+          paddingBottom: 44,
+          paddingLeft: 60,
+          paddingRight: 60,
         }}
       >
         {/* Header */}
@@ -56,10 +59,12 @@ export async function GET(req: NextRequest) {
               color: "white",
               fontSize: 18,
               fontWeight: 700,
-              background: "rgba(0,0,0,0.2)",
-              padding: "6px 20px",
+              backgroundColor: "rgba(0,0,0,0.2)",
+              paddingTop: 6,
+              paddingBottom: 6,
+              paddingLeft: 20,
+              paddingRight: 20,
               borderRadius: 100,
-              letterSpacing: 1,
             }}
           >
             {badge}
@@ -69,7 +74,7 @@ export async function GET(req: NextRequest) {
         {/* Score block */}
         <div
           style={{
-            flex: 1,
+            flexGrow: 1,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -100,8 +105,11 @@ export async function GET(req: NextRequest) {
               color: "rgba(255,255,255,0.85)",
               fontSize: 24,
               marginTop: 22,
-              background: "rgba(0,0,0,0.2)",
-              padding: "10px 28px",
+              backgroundColor: "rgba(0,0,0,0.2)",
+              paddingTop: 10,
+              paddingBottom: 10,
+              paddingLeft: 28,
+              paddingRight: 28,
               borderRadius: 100,
             }}
           >
@@ -112,12 +120,18 @@ export async function GET(req: NextRequest) {
         {/* Footer */}
         <div
           style={{
-            color: "rgba(255,255,255,0.5)",
-            fontSize: 18,
-            textAlign: "right",
+            display: "flex",
+            justifyContent: "flex-end",
           }}
         >
-          libreview.ph · Free UPCAT Reviewer · {date}
+          <span
+            style={{
+              color: "rgba(255,255,255,0.5)",
+              fontSize: 18,
+            }}
+          >
+            libreview.ph · Free UPCAT Reviewer · {date}
+          </span>
         </div>
       </div>
     ),
