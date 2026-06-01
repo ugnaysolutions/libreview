@@ -40,6 +40,7 @@ interface Props {
   topicSlug: string;
   timedMode?: boolean;
   totalTimeSeconds?: number;
+  completeAction?: (sessionId: string) => Promise<void>;
 }
 
 const CHOICES: { key: Choice; label: string }[] = [
@@ -64,7 +65,9 @@ export function PracticeSession({
   topicSlug,
   timedMode = false,
   totalTimeSeconds = 0,
+  completeAction,
 }: Props) {
+  const doComplete = completeAction ?? completePracticeSession;
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [localAnswers, setLocalAnswers] = useState<Set<string>>(
@@ -109,7 +112,7 @@ export function PracticeSession({
           if (!completingRef.current) {
             completingRef.current = true;
             setCompleting(true);
-            completePracticeSession(sessionId).then(() => {
+            doComplete(sessionId).then(() => {
               router.push(
                 `/practice/${subtestSlug}/${topicSlug}/session/results?session=${sessionId}`
               );
@@ -152,7 +155,7 @@ export function PracticeSession({
       if (completingRef.current) return;
       completingRef.current = true;
       setCompleting(true);
-      await completePracticeSession(sessionId);
+      await doComplete(sessionId);
       router.push(
         `/practice/${subtestSlug}/${topicSlug}/session/results?session=${sessionId}`
       );

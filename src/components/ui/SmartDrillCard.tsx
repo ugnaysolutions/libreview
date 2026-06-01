@@ -63,7 +63,7 @@ export function SmartDrillCard({ premium, hasHistory }: Props) {
           <p className="text-sm font-semibold text-foreground">Smart Drill</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {hasHistory
-              ? "Targets your 3 weakest topics automatically"
+              ? "Targets weak topics with difficulty-matched questions"
               : "Practice some topics first to enable this"}
           </p>
           {errorMsg && (
