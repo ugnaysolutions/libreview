@@ -105,7 +105,7 @@ function generateScoreCard(
     ctx.fillText(label, W / 2, lblY + lblH / 2);
 
     // ── Footer ──────────────────────────────────────────────
-    const footerText = `libreview.ph · Free UPCAT Reviewer · ${date}`;
+    const footerText = `libreviewPH.com · Free College Entrance Test reviewer · ${date}`;
     ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.font = "18px sans-serif";
     ctx.textAlign = "right";
@@ -147,7 +147,7 @@ export function ShareScoreButton({
           await navigator.share({
             files: [file],
             title: `I scored ${score}% on LibreviewPH!`,
-            text: `${label} · ${correct}/${total} correct\nPractice free at libreview.ph`,
+            text: `${label} · ${correct}/${total} correct\nPractice free at libreviewPH.com`,
           });
         } else {
           const url = URL.createObjectURL(blob);
