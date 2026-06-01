@@ -307,6 +307,22 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      {/* ── Leaderboard teaser (mobile) ─────────────────────────── */}
+      <Link href="/leaderboard" className="block md:hidden">
+        <Card className="rounded-2xl border-amber-200 bg-amber-50/50 shadow-sm hover:border-amber-300 hover:shadow-md transition-all">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+              <Trophy className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Leaderboard</p>
+              <p className="text-xs text-muted-foreground">See how you rank this week</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </CardContent>
+        </Card>
+      </Link>
+
       {/* ── Weekly Goal ─────────────────────────────────────────── */}
       {weeklyGoal ? (
         <Card className="rounded-2xl border-border shadow-sm">
