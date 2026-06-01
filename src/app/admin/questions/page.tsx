@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { QuestionTable } from "@/components/admin/QuestionTable";
@@ -70,13 +70,22 @@ export default async function AdminQuestionsPage({
             Manage the question bank
           </p>
         </div>
-        <Link
-          href="/admin/questions/new"
-          className={cn(buttonVariants({ size: "sm" }), "rounded-xl gap-1.5")}
-        >
-          <Plus className="h-4 w-4" />
-          Add Question
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/questions/import"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "rounded-xl gap-1.5")}
+          >
+            <Upload className="h-4 w-4" />
+            Import CSV
+          </Link>
+          <Link
+            href="/admin/questions/new"
+            className={cn(buttonVariants({ size: "sm" }), "rounded-xl gap-1.5")}
+          >
+            <Plus className="h-4 w-4" />
+            Add Question
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

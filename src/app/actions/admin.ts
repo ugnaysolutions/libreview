@@ -322,6 +322,76 @@ export async function rejectPaymentRequest(requestId: string): Promise<ActionRes
   }
 }
 
+// ── Bulk Question Import ──────────────────────────────────────────────────────
+
+export interface ImportRow {
+  topic_slug: string;
+  question_text: string;
+  choice_a: string;
+  choice_b: string;
+  choice_c: string;
+  choice_d: string;
+  correct_choice: string;
+  explanation: string;
+  difficulty: number;
+  is_premium: boolean;
+}
+
+export async function bulkImportQuestions(
+  rows: ImportRow[]
+): Promise<{ success: true; imported: number; skipped: number } | { success: false; error: string }> {
+  try {
+    const { supabase, userId } = await requireAdmin();
+
+    // Collect unique slugs and resolve to IDs in one query
+    const slugs = [...new Set(rows.map((r) => r.topic_slug.trim()))];
+    const { data: topics, error: topicsErr } = await supabase
+      .from("topics")
+      .select("id, slug")
+      .in("slug", slugs);
+
+    if (topicsErr) return { success: false, error: topicsErr.message };
+
+    const slugToId = new Map((topics ?? []).map((t) => [t.slug, t.id]));
+
+    const valid: Record<string, unknown>[] = [];
+    let skipped = 0;
+
+    for (const row of rows) {
+      const topicId = slugToId.get(row.topic_slug.trim());
+      if (!topicId) { skipped++; continue; }
+      if (!row.question_text?.trim()) { skipped++; continue; }
+      const choice = (row.correct_choice ?? "").toLowerCase().trim();
+      if (!["a", "b", "c", "d"].includes(choice)) { skipped++; continue; }
+
+      valid.push({
+        topic_id: topicId,
+        question_text: row.question_text.trim(),
+        choice_a: row.choice_a?.trim() ?? "",
+        choice_b: row.choice_b?.trim() ?? "",
+        choice_c: row.choice_c?.trim() ?? "",
+        choice_d: row.choice_d?.trim() ?? "",
+        correct_choice: choice as Choice,
+        explanation: row.explanation?.trim() || null,
+        difficulty: [1, 2, 3].includes(Number(row.difficulty)) ? Number(row.difficulty) : 1,
+        is_premium: String(row.is_premium).toLowerCase() === "true",
+        status: "draft" as const,
+        created_by: userId,
+      });
+    }
+
+    if (valid.length === 0) return { success: false, error: "No valid rows to import. Check topic slugs and required fields." };
+
+    const { error } = await supabase.from("questions").insert(valid);
+    if (error) return { success: false, error: error.message };
+
+    return { success: true, imported: valid.length, skipped };
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
 // ── Broadcast Notifications ───────────────────────────────────────────────────
 
 export async function sendBroadcastNotification(
