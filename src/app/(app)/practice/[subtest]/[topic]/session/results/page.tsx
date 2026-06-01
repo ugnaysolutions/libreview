@@ -271,18 +271,25 @@ export default async function ResultsPage({
                     })}
                   </div>
 
-                  {/* Explanation — premium only */}
-                  {q.explanation && premium && (
+                  {/* Explanation — premium, or free preview for first 3 questions */}
+                  {q.explanation && (premium || i < 3) && (
                     <div className="bg-muted/50 rounded-xl p-3">
-                      <p className="text-xs font-semibold text-muted-foreground mb-1">
-                        Explanation
-                      </p>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-semibold text-muted-foreground">
+                          Explanation
+                        </p>
+                        {!premium && i < 3 && (
+                          <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                            Free Preview
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-foreground/80 leading-relaxed">
                         {q.explanation}
                       </p>
                     </div>
                   )}
-                  {q.explanation && !premium && (
+                  {q.explanation && !premium && i >= 3 && (
                     <Link
                       href="/upgrade"
                       className="flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2"
