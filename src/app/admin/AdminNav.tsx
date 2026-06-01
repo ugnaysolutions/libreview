@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { href: "/admin", label: "Overview", exact: true },
   { href: "/admin/questions", label: "Questions" },
   { href: "/admin/resources", label: "Resources" },
   { href: "/admin/reports", label: "Reports" },
@@ -23,13 +24,13 @@ export function AdminNav() {
         >
           Admin
         </Link>
-        {NAV.map(({ href, label }) => (
+        {NAV.map(({ href, label, exact }) => (
           <Link
             key={href}
             href={href}
             className={cn(
               "px-3 py-1.5 rounded-lg text-sm transition-colors",
-              pathname.startsWith(href)
+              (exact ? pathname === href : pathname.startsWith(href))
                 ? "bg-primary/10 text-primary font-medium"
                 : "text-muted-foreground hover:text-foreground"
             )}
