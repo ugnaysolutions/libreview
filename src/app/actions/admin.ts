@@ -222,6 +222,23 @@ export async function resolveReport(id: string): Promise<ActionResult> {
   }
 }
 
+// ── Wishlist ──────────────────────────────────────────────────────────────────
+
+export async function markWishReviewed(id: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireAdmin();
+    const { error } = await supabase
+      .from("wishlist_requests")
+      .update({ is_reviewed: true })
+      .eq("id", id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
 // ── User Plan Management (testing / admin override) ───────────────────────────
 
 export async function grantPremium(userId: string): Promise<ActionResult> {
