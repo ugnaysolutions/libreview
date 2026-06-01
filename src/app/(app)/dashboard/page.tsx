@@ -2,10 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { DASHBOARD_TAGLINES, pickRandom } from "@/lib/taglines";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { differenceInCalendarDays, format, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import {
   Flame,
-  CalendarDays,
   ClipboardList,
   BookOpen,
   BookMarked,
@@ -17,6 +16,7 @@ import {
   Snowflake,
   CheckCircle2,
   Zap,
+  Target,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -165,7 +165,17 @@ export default async function DashboardPage() {
     };
   });
 
-  // Streak & countdown
+  // Overall accuracy
+  const attemptedTopics = progress.filter((p) => p.total_attempts > 0);
+  const overallAccuracy =
+    attemptedTopics.length > 0
+      ? Math.round(
+          attemptedTopics.reduce((sum, p) => sum + Number(p.accuracy_percentage), 0) /
+            attemptedTopics.length
+        )
+      : null;
+
+  // Streak
   const streak = profile.streak_count ?? 0;
   const currentMonth = today.slice(0, 7);
   const freezeUsed =
@@ -258,47 +268,29 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Nearest exam countdown */}
-        {examTargets.length > 0 ? (
-          (() => {
-            const nearest = examTargets[0];
-            const days = differenceInCalendarDays(parseISO(nearest.exam_date), new Date());
-            return (
-              <Card className="rounded-2xl border-border shadow-sm">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <CalendarDays className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    {days >= 0 ? (
-                      <>
-                        <p className="text-2xl font-bold text-foreground leading-none">{days}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">days until exam</p>
-                      </>
-                    ) : (
-                      <p className="text-sm font-semibold text-muted-foreground">Exam passed</p>
-                    )}
-                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
-                      {nearest.exam_type.toUpperCase()}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()
-        ) : (
-          <Card className="rounded-2xl border-border shadow-sm">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <CalendarDays className="h-5 w-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">Exam date</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Not set</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Overall accuracy */}
+        <Card className="rounded-2xl border-border shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Target className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              {overallAccuracy !== null ? (
+                <>
+                  <p className="text-2xl font-bold text-foreground leading-none">
+                    {overallAccuracy}%
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">overall accuracy</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-foreground">Accuracy</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">No data yet</p>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* ── Exam Targets Carousel ─────────────────────────────── */}
