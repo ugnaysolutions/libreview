@@ -23,6 +23,7 @@ interface Props {
   unreadCount: number;
   notifications: Notification[];
   direction?: "down" | "up";
+  align?: "left" | "right";
 }
 
 function typeIcon(type: string) {
@@ -55,7 +56,7 @@ function relativeTime(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
 }
 
-export function NotificationBell({ unreadCount, notifications, direction = "down" }: Props) {
+export function NotificationBell({ unreadCount, notifications, direction = "down", align = "left" }: Props) {
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notification[]>(notifications);
   const [unread, setUnread] = useState(unreadCount);
@@ -120,7 +121,8 @@ export function NotificationBell({ unreadCount, notifications, direction = "down
       {open && (
         <div
           className={cn(
-            "absolute right-0 z-[200] w-80 rounded-2xl border border-border bg-white shadow-xl",
+            "absolute z-[200] w-80 rounded-2xl border border-border bg-white shadow-xl",
+            align === "right" ? "right-0" : "left-0",
             direction === "up" ? "bottom-full mb-2" : "top-full mt-2"
           )}
         >

@@ -46,7 +46,7 @@ export function Sidebar({ user, isPremium, unreadCount, notifications }: Sidebar
         <span className="text-xl font-bold text-primary font-heading">
           {APP_NAME}
         </span>
-        <NotificationBell unreadCount={unreadCount} notifications={notifications} direction="down" />
+        <NotificationBell unreadCount={unreadCount} notifications={notifications} direction="down" align="left" />
       </div>
 
       <nav className="flex-1 py-4 px-3">

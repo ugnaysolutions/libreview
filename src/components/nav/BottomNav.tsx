@@ -65,7 +65,6 @@ export function BottomNav({ user, isPremium, unreadCount, notifications }: Botto
         </div>
 
         <div className="flex items-center gap-2">
-          <NotificationBell unreadCount={unreadCount} notifications={notifications} direction="up" />
           {!isPremium && (
             <Link
               href="/upgrade"
@@ -84,6 +83,7 @@ export function BottomNav({ user, isPremium, unreadCount, notifications }: Botto
               Sign out
             </button>
           </form>
+          <NotificationBell unreadCount={unreadCount} notifications={notifications} direction="up" align="right" />
         </div>
       </div>
 
