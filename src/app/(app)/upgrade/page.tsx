@@ -31,7 +31,20 @@ export default async function UpgradePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const premium = await isPremium(user.id);
+  const paymentProvider: "manual" | "paymongo" =
+    process.env.PAYMENT_PROVIDER === "paymongo" ? "paymongo" : "manual";
+
+  const [premium, pendingResult] = await Promise.all([
+    isPremium(user.id),
+    supabase
+      .from("payment_requests")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .maybeSingle(),
+  ]);
+
+  const hasPendingRequest = !!pendingResult.data;
 
   let planType: string | null = null;
   let planExpiresAt: string | null = null;
@@ -117,21 +130,28 @@ export default async function UpgradePage() {
               </p>
             </div>
           </div>
-          <div className="space-y-2">
-            <p className="text-xs text-center text-muted-foreground font-medium">Renew early to extend your access</p>
-            <div className="grid grid-cols-2 gap-3">
-              <PayMongoButton plan="monthly" label="Renew Monthly" />
-              <PayMongoButton plan="annual" label="Renew Annual" />
+          {paymentProvider === "paymongo" && (
+            <div className="space-y-2">
+              <p className="text-xs text-center text-muted-foreground font-medium">Renew early to extend your access</p>
+              <div className="grid grid-cols-2 gap-3">
+                <PayMongoButton plan="monthly" label="Renew Monthly" />
+                <PayMongoButton plan="annual" label="Renew Annual" />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
-          <PlanCards />
+          <PlanCards
+            paymentProvider={paymentProvider}
+            hasPendingRequest={hasPendingRequest}
+          />
 
-          <p className="text-xs text-muted-foreground text-center">
-            GCash · Maya · Credit / Debit Card · Secure via PayMongo
-          </p>
+          {paymentProvider === "paymongo" && (
+            <p className="text-xs text-muted-foreground text-center">
+              GCash · Maya · Credit / Debit Card · Secure via PayMongo
+            </p>
+          )}
           <Link
             href="/dashboard"
             className={cn(

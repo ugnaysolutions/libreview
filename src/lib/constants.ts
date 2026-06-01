@@ -139,6 +139,11 @@ export const FREE_PLAN = {
   dailyMockLimit: 1,
 } as const;
 
+export const PRICING = {
+  monthly: { cents: 9900,  label: "₱99/mo",  display: "₱99",  period: "per month" },
+  annual:  { cents: 99900, label: "₱999/yr", display: "₱999", period: "per year · ~₱83/mo" },
+} as const;
+
 export const ACCURACY_THRESHOLDS = {
   good: 70,
   average: 50,

@@ -40,9 +40,9 @@ export async function POST(req: NextRequest) {
   const amountCents =
     plan === "annual"
       ? parseInt(process.env.PAYMONGO_ANNUAL_AMOUNT_CENTS ?? "99900")
-      : parseInt(process.env.PAYMONGO_MONTHLY_AMOUNT_CENTS ?? "14900");
+      : parseInt(process.env.PAYMONGO_MONTHLY_AMOUNT_CENTS ?? "9900");
 
-  const planLabel = plan === "annual" ? "Annual (₱999)" : "Monthly (₱149)";
+  const planLabel = plan === "annual" ? "Annual (₱999)" : "Monthly (₱99)";
   const duration = plan === "annual" ? "365 days" : "30 days";
 
   const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_APP_URL!;

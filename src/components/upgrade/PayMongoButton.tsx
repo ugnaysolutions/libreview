@@ -37,7 +37,7 @@ export function PayMongoButton({ plan, label }: Props) {
   }
 
   const defaultLabel =
-    plan === "annual" ? "Get Annual – ₱999/yr" : "Get Monthly – ₱149/mo";
+    plan === "annual" ? "Get Annual – ₱999/yr" : "Get Monthly – ₱99/mo";
 
   return (
     <div className="space-y-1.5">

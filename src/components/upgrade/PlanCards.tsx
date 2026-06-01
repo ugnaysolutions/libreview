@@ -2,10 +2,27 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { PRICING } from "@/lib/constants";
 import { PayMongoButton } from "./PayMongoButton";
+import { ManualPaymentForm } from "./ManualPaymentForm";
 
-export function PlanCards() {
+interface Props {
+  paymentProvider: "manual" | "paymongo";
+  hasPendingRequest: boolean;
+}
+
+export function PlanCards({ paymentProvider, hasPendingRequest }: Props) {
   const [selected, setSelected] = useState<"monthly" | "annual">("annual");
+
+  if (paymentProvider === "manual") {
+    return (
+      <ManualPaymentForm
+        plan={selected}
+        onPlanChange={setSelected}
+        hasPendingRequest={hasPendingRequest}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -22,8 +39,8 @@ export function PlanCards() {
         >
           <div>
             <p className="font-semibold text-foreground text-sm">Monthly</p>
-            <p className="text-2xl font-bold text-foreground mt-1">₱149</p>
-            <p className="text-xs text-muted-foreground">per month</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{PRICING.monthly.display}</p>
+            <p className="text-xs text-muted-foreground">{PRICING.monthly.period}</p>
           </div>
           <div className="flex-1" />
           <PayMongoButton plan="monthly" />
@@ -46,9 +63,9 @@ export function PlanCards() {
           </div>
           <div>
             <p className="font-semibold text-foreground text-sm">Annual</p>
-            <p className="text-2xl font-bold text-foreground mt-1">₱999</p>
-            <p className="text-xs text-muted-foreground">per year · ~₱83/mo</p>
-            <p className="text-xs text-primary font-medium mt-0.5">Save 44%</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{PRICING.annual.display}</p>
+            <p className="text-xs text-muted-foreground">{PRICING.annual.period}</p>
+            <p className="text-xs text-primary font-medium mt-0.5">Save 16%</p>
           </div>
           <div className="flex-1" />
           <PayMongoButton plan="annual" />

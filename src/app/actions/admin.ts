@@ -245,3 +245,61 @@ export async function revokePremium(userId: string): Promise<ActionResult> {
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
+
+// ── Payment Requests ──────────────────────────────────────────────────────────
+
+export async function approvePaymentRequest(requestId: string): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await requireAdmin();
+
+    const { data: req, error: fetchErr } = await supabase
+      .from("payment_requests")
+      .select("user_id, plan_type, reference_number")
+      .eq("id", requestId)
+      .single();
+
+    if (fetchErr || !req) return { success: false, error: fetchErr?.message ?? "Request not found" };
+
+    const days = req.plan_type === "annual" ? 365 : 30;
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
+    await activatePremium(req.user_id, expiresAt, req.plan_type as "monthly" | "annual");
+
+    await supabase.from("subscriptions").insert({
+      user_id: req.user_id,
+      provider: "manual",
+      provider_subscription_id: req.reference_number,
+      plan_type: req.plan_type,
+      status: "active",
+      current_period_end: expiresAt.toISOString(),
+    });
+
+    const { error: updateErr } = await supabase
+      .from("payment_requests")
+      .update({ status: "approved", reviewed_by: userId, reviewed_at: new Date().toISOString() })
+      .eq("id", requestId);
+
+    if (updateErr) return { success: false, error: updateErr.message };
+    return { success: true };
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
+export async function rejectPaymentRequest(requestId: string): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await requireAdmin();
+
+    const { error } = await supabase
+      .from("payment_requests")
+      .update({ status: "rejected", reviewed_by: userId, reviewed_at: new Date().toISOString() })
+      .eq("id", requestId);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
