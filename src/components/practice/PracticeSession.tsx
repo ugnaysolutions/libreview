@@ -19,9 +19,17 @@ export interface PracticeQuestion {
   choice_c: string;
   choice_d: string;
   correct_choice: Choice;
+  difficulty: number;
   passage_id: string | null;
   passage: { id: string; content: string | null; image_url: string | null } | null;
 }
+
+const DIFFICULTY_LABEL: Record<number, string> = { 1: "Easy", 2: "Medium", 3: "Hard" };
+const DIFFICULTY_CLASS: Record<number, string> = {
+  1: "bg-green-100 text-green-700",
+  2: "bg-amber-100 text-amber-700",
+  3: "bg-red-100 text-red-700",
+};
 
 interface Props {
   sessionId: string;
@@ -167,9 +175,21 @@ export function PracticeSession({
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-muted-foreground">
-          Question {currentIndex + 1} of {questions.length}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-muted-foreground">
+            Question {currentIndex + 1} of {questions.length}
+          </p>
+          {question.difficulty && (
+            <span
+              className={cn(
+                "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                DIFFICULTY_CLASS[question.difficulty] ?? "bg-muted text-muted-foreground"
+              )}
+            >
+              {DIFFICULTY_LABEL[question.difficulty] ?? "—"}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {timedMode && (
             <span

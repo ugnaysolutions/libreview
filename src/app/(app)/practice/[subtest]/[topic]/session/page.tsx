@@ -48,7 +48,7 @@ export default async function SessionPage({
     supabase
       .from("questions")
       .select(
-        "id, question_text, image_url, choice_a, choice_b, choice_c, choice_d, correct_choice, passage_id, passages(id, content, image_url)"
+        "id, question_text, image_url, choice_a, choice_b, choice_c, choice_d, correct_choice, difficulty, passage_id, passages(id, content, image_url)"
       )
       .in("id", questionIds),
     supabase
@@ -79,6 +79,7 @@ export default async function SessionPage({
         choice_c: q.choice_c,
         choice_d: q.choice_d,
         correct_choice: q.correct_choice,
+        difficulty: (q as { difficulty: number }).difficulty ?? 1,
         passage_id: q.passage_id ?? null,
         passage: passage ?? null,
       };
