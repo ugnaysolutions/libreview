@@ -15,6 +15,15 @@ export async function activatePremium(
       plan_type: planType,
     })
     .eq("id", userId);
+
+  await supabase.from("notifications").insert({
+    user_id: userId,
+    type: "premium_activated",
+    title: "Premium is active! ⚡",
+    body: "All features are now unlocked. Good luck with your exam prep!",
+    action_url: "/upgrade",
+  });
+
   revalidateTag(`premium-${userId}`, "default");
 }
 

@@ -7,6 +7,7 @@ import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap, Sett
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
 import { signOut } from "@/app/actions/auth";
+import { NotificationBell, type Notification } from "@/components/nav/NotificationBell";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", Icon: Home },
@@ -23,21 +24,29 @@ interface User {
   isPremium?: boolean;
 }
 
+interface SidebarProps {
+  user: User;
+  isPremium?: boolean;
+  unreadCount: number;
+  notifications: Notification[];
+}
+
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "?";
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function Sidebar({ user, isPremium }: { user: User; isPremium?: boolean }) {
+export function Sidebar({ user, isPremium, unreadCount, notifications }: SidebarProps) {
   const pathname = usePathname();
 
   return (
     <aside className="hidden md:flex flex-col w-60 shrink-0 border-r border-border bg-white min-h-screen sticky top-0 h-screen">
-      <div className="flex items-center gap-2 px-6 py-5 border-b border-border">
+      <div className="flex items-center justify-between px-6 py-5 border-b border-border">
         <span className="text-xl font-bold text-primary font-heading">
           {APP_NAME}
         </span>
+        <NotificationBell unreadCount={unreadCount} notifications={notifications} direction="down" />
       </div>
 
       <nav className="flex-1 py-4 px-3">

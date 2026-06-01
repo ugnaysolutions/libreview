@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/app/actions/auth";
+import { NotificationBell, type Notification } from "@/components/nav/NotificationBell";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", Icon: Home },
@@ -21,13 +22,20 @@ interface User {
   avatarUrl: string | null;
 }
 
+interface BottomNavProps {
+  user: User;
+  isPremium?: boolean;
+  unreadCount: number;
+  notifications: Notification[];
+}
+
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "?";
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function BottomNav({ user, isPremium }: { user: User; isPremium?: boolean }) {
+export function BottomNav({ user, isPremium, unreadCount, notifications }: BottomNavProps) {
   const pathname = usePathname();
   const firstName = user.name.split(" ")[0];
 
@@ -57,6 +65,7 @@ export function BottomNav({ user, isPremium }: { user: User; isPremium?: boolean
         </div>
 
         <div className="flex items-center gap-2">
+          <NotificationBell unreadCount={unreadCount} notifications={notifications} direction="up" />
           {!isPremium && (
             <Link
               href="/upgrade"

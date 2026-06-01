@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import type { Choice, QuestionStatus } from "@/lib/supabase/types";
@@ -297,6 +298,44 @@ export async function rejectPaymentRequest(requestId: string): Promise<ActionRes
       .eq("id", requestId);
 
     if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
+// ── Broadcast Notifications ───────────────────────────────────────────────────
+
+export async function sendBroadcastNotification(
+  title: string,
+  body: string,
+  actionUrl?: string
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const adminClient = createAdminClient();
+
+    const { data: profiles, error: fetchErr } = await adminClient
+      .from("user_profiles")
+      .select("id");
+
+    if (fetchErr) return { success: false, error: fetchErr.message };
+
+    const rows = (profiles ?? []).map((p) => ({
+      user_id: p.id,
+      type: "broadcast",
+      title: title.trim(),
+      body: body.trim(),
+      action_url: actionUrl?.trim() || null,
+      dedup_key: null,
+    }));
+
+    if (rows.length === 0) return { success: true };
+
+    const { error } = await adminClient.from("notifications").insert(rows);
+    if (error) return { success: false, error: error.message };
+
     return { success: true };
   } catch (err) {
     if (isRedirectError(err)) throw err;

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { PlanToggleButtons } from "./PlanToggleButtons";
 import { PaymentRequestsTable } from "@/components/admin/PaymentRequestsTable";
+import { BroadcastNotificationForm } from "@/components/admin/BroadcastNotificationForm";
 
 export default async function AdminUsersPage() {
   const supabase = await createClient();
@@ -124,6 +125,17 @@ export default async function AdminUsersPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Broadcast notification */}
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Send Notification</h2>
+          <p className="text-sm text-muted-foreground">
+            Broadcast a message to all users (e.g. new questions, announcements).
+          </p>
+        </div>
+        <BroadcastNotificationForm />
       </div>
     </div>
   );
