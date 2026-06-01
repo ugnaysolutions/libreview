@@ -15,7 +15,6 @@ const NAV_ITEMS = [
   { href: "/mock-exam", label: "Mock Exam", Icon: ClipboardList },
   { href: "/resources", label: "Resources", Icon: PlayCircle },
   { href: "/progress", label: "Progress", Icon: BarChart2 },
-  { href: "/wishlist", label: "Wishlist", Icon: Sparkles },
 ];
 
 interface User {
@@ -124,6 +123,19 @@ export function Sidebar({ user, isPremium, unreadCount, notifications }: Sidebar
         >
           <Settings className="h-4 w-4 shrink-0" aria-hidden />
           Settings
+        </Link>
+
+        <Link
+          href="/wishlist"
+          className={cn(
+            "flex items-center gap-2 w-full px-3 py-2 rounded-xl text-sm font-medium transition-colors",
+            pathname === "/wishlist"
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+          Wishlist
         </Link>
 
         <form action={signOut}>

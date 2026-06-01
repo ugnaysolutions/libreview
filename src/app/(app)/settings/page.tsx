@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Sparkles, ChevronRight } from "lucide-react";
 import { ExamTargetsManager } from "@/components/settings/ExamTargetsManager";
 
 export default async function SettingsPage() {
@@ -48,6 +50,33 @@ export default async function SettingsPage() {
           </p>
         </div>
         <ExamTargetsManager targets={targets} />
+      </section>
+
+      {/* Feedback & Ideas */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Feedback & Ideas</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Help shape what Libreview becomes.
+          </p>
+        </div>
+        <Link
+          href="/wishlist"
+          className="flex items-center justify-between gap-3 rounded-xl border border-border p-4 hover:bg-muted/50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Make a Wish</p>
+              <p className="text-xs text-muted-foreground">
+                Request features, universities, topics & more
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        </Link>
       </section>
     </div>
   );

@@ -14,7 +14,6 @@ const NAV_ITEMS = [
   { href: "/mock-exam", label: "Mock Exam", Icon: ClipboardList },
   { href: "/resources", label: "Resources", Icon: PlayCircle },
   { href: "/progress", label: "Progress", Icon: BarChart2 },
-  { href: "/wishlist", label: "Wishlist", Icon: Sparkles },
 ];
 
 interface User {
