@@ -78,7 +78,15 @@ export function Sidebar({ user, isPremium, unreadCount, notifications }: Sidebar
 
       {/* User footer */}
       <div className="border-t border-border px-4 py-4 space-y-3">
-        <div className="flex items-center gap-3 min-w-0">
+        <Link
+          href="/settings"
+          className={cn(
+            "flex items-center gap-3 min-w-0 rounded-xl px-1 py-1 transition-colors hover:bg-muted",
+            pathname === "/settings" || pathname.startsWith("/settings/")
+              ? "bg-muted"
+              : ""
+          )}
+        >
           {user.avatarUrl ? (
             <Image
               src={user.avatarUrl}
@@ -100,7 +108,7 @@ export function Sidebar({ user, isPremium, unreadCount, notifications }: Sidebar
             </p>
             <p className="text-xs text-muted-foreground truncate">{user.email}</p>
           </div>
-        </div>
+        </Link>
 
         {!isPremium && (
           <Link

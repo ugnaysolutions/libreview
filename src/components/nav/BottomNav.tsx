@@ -43,7 +43,15 @@ export function BottomNav({ user, isPremium, unreadCount, notifications }: Botto
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-border md:hidden">
       {/* User identity bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/60">
-        <div className="flex items-center gap-2 min-w-0">
+        <Link
+          href="/settings"
+          className={cn(
+            "flex items-center gap-2 min-w-0 rounded-lg px-1 py-0.5 transition-opacity",
+            pathname === "/settings" || pathname.startsWith("/settings/")
+              ? "opacity-100"
+              : "hover:opacity-75"
+          )}
+        >
           {user.avatarUrl ? (
             <Image
               src={user.avatarUrl}
@@ -62,7 +70,7 @@ export function BottomNav({ user, isPremium, unreadCount, notifications }: Botto
           <span className="text-xs font-semibold text-foreground truncate">
             {firstName}
           </span>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-2">
           {!isPremium && (
