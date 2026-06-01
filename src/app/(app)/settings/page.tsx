@@ -1,0 +1,54 @@
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { ExamTargetsManager } from "@/components/settings/ExamTargetsManager";
+
+export default async function SettingsPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const [profileRes, targetsRes] = await Promise.all([
+    supabase
+      .from("user_profiles")
+      .select("full_name, avatar_url")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("user_exam_targets")
+      .select("id, exam_type, exam_date")
+      .eq("user_id", user.id)
+      .order("exam_date"),
+  ]);
+
+  const profile = profileRes.data;
+  const targets = targetsRes.data ?? [];
+
+  return (
+    <div className="max-w-lg mx-auto px-4 py-6 space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold font-heading text-foreground">Settings</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Manage your profile and exam targets.</p>
+      </div>
+
+      {/* Profile (read-only for now) */}
+      <section className="space-y-2">
+        <h2 className="text-base font-semibold text-foreground">Profile</h2>
+        <div className="text-sm text-muted-foreground space-y-0.5">
+          <p>{profile?.full_name ?? "—"}</p>
+          <p className="text-xs">{user.email}</p>
+        </div>
+      </section>
+
+      {/* Exam Targets */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Exam Targets</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Track countdowns for each entrance exam you&apos;re preparing for.
+          </p>
+        </div>
+        <ExamTargetsManager targets={targets} />
+      </section>
+    </div>
+  );
+}

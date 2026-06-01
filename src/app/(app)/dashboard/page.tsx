@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { AccuracyRing } from "@/components/ui/AccuracyRing";
 import { cn } from "@/lib/utils";
 import { isPremium } from "@/lib/plan";
+import { ExamTargetsCarousel } from "@/components/dashboard/ExamTargetsCarousel";
 
 const SUBTEST_META: Record<
   string,
@@ -63,7 +64,7 @@ export default async function DashboardPage() {
   // Parallel data fetch
   const today = new Date().toISOString().split("T")[0];
 
-  const [profileRes, subtestsRes, progressRes, sessionsRes, premium, dailyCompletionRes] = await Promise.all(
+  const [profileRes, subtestsRes, progressRes, sessionsRes, premium, dailyCompletionRes, examTargetsRes] = await Promise.all(
     [
       supabase
         .from("user_profiles")
@@ -95,6 +96,11 @@ export default async function DashboardPage() {
         .eq("user_id", user.id)
         .eq("date", today)
         .maybeSingle(),
+      supabase
+        .from("user_exam_targets")
+        .select("id, exam_type, exam_date")
+        .eq("user_id", user.id)
+        .order("exam_date"),
     ]
   );
 
@@ -103,6 +109,7 @@ export default async function DashboardPage() {
   const progress = progressRes.data ?? [];
   const sessions = sessionsRes.data ?? [];
   const dailyCompletion = dailyCompletionRes.data ?? null;
+  const examTargets = examTargetsRes.data ?? [];
 
   if (!profile) redirect("/onboarding");
 
@@ -167,13 +174,6 @@ export default async function DashboardPage() {
       ? ((profile as { streak_freeze_used?: number }).streak_freeze_used ?? 0)
       : 0;
   const freezesRemaining = premium ? Math.max(0, 3 - freezeUsed) : 0;
-
-  const daysUntilExam = profile.target_exam_date
-    ? differenceInCalendarDays(
-        parseISO(profile.target_exam_date),
-        new Date()
-      )
-    : null;
 
   const displayName = profile.full_name?.split(" ")[0] ?? "there";
   const tagline = pickRandom(DASHBOARD_TAGLINES);
@@ -258,36 +258,54 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Days until exam */}
-        <Card className="rounded-2xl border-border shadow-sm">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <CalendarDays className="h-5 w-5 text-primary" />
-            </div>
-            <div className="min-w-0">
-              {daysUntilExam !== null && daysUntilExam >= 0 ? (
-                <>
-                  <p className="text-2xl font-bold text-foreground leading-none">
-                    {daysUntilExam}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    days until exam
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-semibold text-foreground">
-                    Exam date
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Not set
-                  </p>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Nearest exam countdown */}
+        {examTargets.length > 0 ? (
+          (() => {
+            const nearest = examTargets[0];
+            const days = differenceInCalendarDays(parseISO(nearest.exam_date), new Date());
+            return (
+              <Card className="rounded-2xl border-border shadow-sm">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <CalendarDays className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    {days >= 0 ? (
+                      <>
+                        <p className="text-2xl font-bold text-foreground leading-none">{days}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">days until exam</p>
+                      </>
+                    ) : (
+                      <p className="text-sm font-semibold text-muted-foreground">Exam passed</p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                      {nearest.exam_type.toUpperCase()}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()
+        ) : (
+          <Card className="rounded-2xl border-border shadow-sm">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <CalendarDays className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">Exam date</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Not set</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* ── Exam Targets Carousel ─────────────────────────────── */}
+      <ExamTargetsCarousel
+        targets={examTargets}
+        legacyExamDate={examTargets.length === 0 ? profile.target_exam_date : null}
+      />
 
       {/* ── Daily Challenge ─────────────────────────────────────── */}
       {dailyCompletion ? (

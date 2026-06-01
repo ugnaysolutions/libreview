@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 import { toast } from "sonner";
+import { UNIVERSITY_EXAM_MAP } from "@/lib/constants";
 
 const schema = z.object({
   targetExamDate: z.string().min(1, "Please select your target exam date"),
@@ -66,6 +67,18 @@ export function OnboardingForm({
       toast.error("Failed to save profile. Please try again.");
       setSaving(false);
       return;
+    }
+
+    // Seed exam target from selected university slug
+    const selectedUniversity = universities.find((u) => u.id === values.targetUniversityId);
+    const examType = selectedUniversity?.slug
+      ? UNIVERSITY_EXAM_MAP[selectedUniversity.slug] ?? null
+      : null;
+    if (examType) {
+      await supabase.from("user_exam_targets").upsert(
+        { user_id: userId, exam_type: examType, exam_date: values.targetExamDate },
+        { onConflict: "user_id,exam_type" }
+      );
     }
 
     router.push("/dashboard");

@@ -119,6 +119,18 @@ export const SCHOOL_EXAMS = {
 
 export type ExamType = keyof typeof SCHOOL_EXAMS;
 
+/** Maps university slug (from the universities table) to its corresponding exam type. */
+export const UNIVERSITY_EXAM_MAP: Partial<Record<string, ExamType>> = {
+  upcat: "upcat",
+  up: "upcat",
+  acet: "acet",
+  ateneo: "acet",
+  dlsu: "dlsu",
+  "de-la-salle": "dlsu",
+  ust: "ust",
+  dost: "dost",
+};
+
 export const PRACTICE_SESSION_QUESTION_COUNT = 10;
 export const TIMED_PRACTICE_SECONDS_PER_QUESTION = 60;
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap } from "lucide-react";
+import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
 import { signOut } from "@/app/actions/auth";
@@ -102,6 +102,19 @@ export function Sidebar({ user, isPremium }: { user: User; isPremium?: boolean }
             Upgrade to Premium
           </Link>
         )}
+
+        <Link
+          href="/settings"
+          className={cn(
+            "flex items-center gap-2 w-full px-3 py-2 rounded-xl text-sm font-medium transition-colors",
+            pathname === "/settings" || pathname.startsWith("/settings/")
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Settings className="h-4 w-4 shrink-0" aria-hidden />
+          Settings
+        </Link>
 
         <form action={signOut}>
           <button
