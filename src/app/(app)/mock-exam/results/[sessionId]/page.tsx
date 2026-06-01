@@ -158,6 +158,9 @@ export default async function MockExamResultsPage({
     questionsBySubtest.set(sid, arr);
   }
 
+  // Global index map (preserves question_ids order) for preview gating
+  const questionIndexMap = new Map(questions.map((q, i) => [q.id, i]));
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       {/* Score hero */}
@@ -253,160 +256,143 @@ export default async function MockExamResultsPage({
       <section className="space-y-6">
         <h2 className="text-base font-semibold text-foreground">Review</h2>
 
-        {!premium ? (
-          <div className="relative rounded-2xl overflow-hidden">
-            {/* Blurred preview of a question card */}
-            <div className="blur-sm pointer-events-none select-none space-y-3" aria-hidden>
-              <div className="rounded-2xl border border-border bg-white p-4 space-y-3">
-                <div className="flex items-start gap-2">
-                  <XCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                  <p className="text-sm font-medium text-foreground">
-                    Which of the following best describes the relationship between speed and velocity?
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  {["a", "b", "c", "d"].map((k) => (
-                    <div key={k} className={cn("flex items-start gap-2 text-sm px-3 py-2 rounded-lg", k === "b" && "bg-green-50 text-green-800 font-medium", k === "a" && "bg-red-50 text-red-700", !["a","b"].includes(k) && "text-muted-foreground")}>
-                      <span className="font-semibold uppercase shrink-0">{k}.</span>
-                      <span className="flex-1">Sample answer choice {k.toUpperCase()}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-border bg-white p-4 space-y-2">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                  <p className="text-sm font-medium text-foreground">
-                    A student mixes two substances and observes a color change. What type of reaction occurred?
-                  </p>
-                </div>
-              </div>
-            </div>
+        {subtestList.map((s) => {
+          const sQuestions = (questionsBySubtest.get(s.id) ?? []).filter(
+            (q) => premium || (questionIndexMap.get(q.id) ?? 0) < 15
+          );
+          if (sQuestions.length === 0) return null;
+          return (
+            <div key={s.id} className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                {s.name}
+              </h3>
+              {sQuestions.map((q) => {
+                const globalIdx = questionIndexMap.get(q.id) ?? 0;
+                const answer = aMap.get(q.id);
+                const chosen = answer?.chosen_choice as Choice | null | undefined;
+                const isCorrect = answer?.is_correct;
+                const choiceText: Record<Choice, string> = {
+                  a: q.choice_a,
+                  b: q.choice_b,
+                  c: q.choice_c,
+                  d: q.choice_d,
+                };
 
-            {/* Lock overlay */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-white/70 backdrop-blur-[2px] rounded-2xl">
-              <div className="h-14 w-14 rounded-2xl bg-amber-50 flex items-center justify-center">
-                <Lock className="h-6 w-6 text-amber-500" />
-              </div>
-              <div className="text-center px-4">
-                <p className="font-bold text-foreground">Premium feature</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Upgrade to review each question with correct answers and explanations.
-                </p>
-              </div>
-              <Link
-                href="/upgrade"
-                className={cn(buttonVariants({ size: "sm" }), "rounded-xl gap-1.5")}
-              >
-                <Zap className="h-3.5 w-3.5" />
-                Upgrade to Premium
-              </Link>
-            </div>
-          </div>
-        ) : (
-          subtestList.map((s) => {
-            const sQuestions = questionsBySubtest.get(s.id) ?? [];
-            if (sQuestions.length === 0) return null;
-            return (
-              <div key={s.id} className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  {s.name}
-                </h3>
-                {sQuestions.map((q) => {
-                  const answer = aMap.get(q.id);
-                  const chosen = answer?.chosen_choice as Choice | null | undefined;
-                  const isCorrect = answer?.is_correct;
-                  const choiceText: Record<Choice, string> = {
-                    a: q.choice_a,
-                    b: q.choice_b,
-                    c: q.choice_c,
-                    d: q.choice_d,
-                  };
-
-                  return (
-                    <Card
-                      key={q.id}
-                      className="rounded-2xl border-border shadow-sm"
-                    >
-                      <CardContent className="p-4 space-y-3">
-                        <div className="flex items-start gap-2">
-                          {isCorrect ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                          )}
-                          <p className="text-sm font-medium text-foreground leading-snug flex-1">
-                            {q.question_text}
-                          </p>
-                          {!isCorrect && (
-                            <BookmarkButton
-                              questionId={q.id}
-                              defaultBookmarked={bookmarkedSet.has(q.id)}
-                            />
-                          )}
-                        </div>
-
-                        {q.image_url && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={q.image_url}
-                            alt=""
-                            className="w-full rounded-lg object-contain max-h-32"
-                            loading="lazy"
+                return (
+                  <Card
+                    key={q.id}
+                    className="rounded-2xl border-border shadow-sm"
+                  >
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start gap-2">
+                        {isCorrect ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                        )}
+                        <p className="text-sm font-medium text-foreground leading-snug flex-1">
+                          {q.question_text}
+                        </p>
+                        {!isCorrect && (
+                          <BookmarkButton
+                            questionId={q.id}
+                            defaultBookmarked={bookmarkedSet.has(q.id)}
                           />
                         )}
+                      </div>
 
-                        <div className="space-y-1">
-                          {(["a", "b", "c", "d"] as Choice[]).map((key) => {
-                            const isChosenKey = chosen === key;
-                            const isCorrectKey = q.correct_choice === key;
-                            return (
-                              <div
-                                key={key}
-                                className={cn(
-                                  "flex items-start gap-2 text-sm px-3 py-2 rounded-lg",
-                                  isCorrectKey &&
-                                    "bg-green-50 text-green-800 font-medium",
-                                  isChosenKey &&
-                                    !isCorrectKey &&
-                                    "bg-red-50 text-red-700",
+                      {q.image_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={q.image_url}
+                          alt=""
+                          className="w-full rounded-lg object-contain max-h-32"
+                          loading="lazy"
+                        />
+                      )}
+
+                      <div className="space-y-1">
+                        {(["a", "b", "c", "d"] as Choice[]).map((key) => {
+                          const isChosenKey = chosen === key;
+                          const isCorrectKey = q.correct_choice === key;
+                          return (
+                            <div
+                              key={key}
+                              className={cn(
+                                "flex items-start gap-2 text-sm px-3 py-2 rounded-lg",
+                                isCorrectKey &&
+                                  "bg-green-50 text-green-800 font-medium",
+                                isChosenKey &&
                                   !isCorrectKey &&
-                                    !isChosenKey &&
-                                    "text-muted-foreground"
-                                )}
-                              >
-                                <span className="font-semibold uppercase shrink-0">
-                                  {key}.
-                                </span>
-                                <span className="flex-1">{choiceText[key]}</span>
-                                {isCorrectKey && (
-                                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
-                                )}
-                                {isChosenKey && !isCorrectKey && (
-                                  <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
+                                  "bg-red-50 text-red-700",
+                                !isCorrectKey &&
+                                  !isChosenKey &&
+                                  "text-muted-foreground"
+                              )}
+                            >
+                              <span className="font-semibold uppercase shrink-0">
+                                {key}.
+                              </span>
+                              <span className="flex-1">{choiceText[key]}</span>
+                              {isCorrectKey && (
+                                <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
+                              )}
+                              {isChosenKey && !isCorrectKey && (
+                                <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
 
-                        {q.explanation && (
-                          <div className="bg-muted/50 rounded-xl p-3">
-                            <p className="text-xs font-semibold text-muted-foreground mb-1">
+                      {/* Explanation — premium, or free preview for first 15 questions */}
+                      {q.explanation && (premium || globalIdx < 15) && (
+                        <div className="bg-muted/50 rounded-xl p-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-semibold text-muted-foreground">
                               Explanation
                             </p>
-                            <p className="text-xs text-foreground/80 leading-relaxed">
-                              {q.explanation}
-                            </p>
+                            {!premium && globalIdx < 15 && (
+                              <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                Free Preview
+                              </span>
+                            )}
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            );
-          })
+                          <p className="text-xs text-foreground/80 leading-relaxed">
+                            {q.explanation}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          );
+        })}
+
+        {/* Lock prompt for questions beyond the free preview */}
+        {!premium && questions.length > 15 && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-6 flex flex-col items-center gap-4 text-center">
+            <div className="h-12 w-12 rounded-2xl bg-amber-100 flex items-center justify-center">
+              <Lock className="h-5 w-5 text-amber-500" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">
+                {questions.length - 15} more questions locked
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Upgrade to Premium to review all questions with correct answers and explanations.
+              </p>
+            </div>
+            <Link
+              href="/upgrade"
+              className={cn(buttonVariants({ size: "sm" }), "rounded-xl gap-1.5")}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Upgrade to Premium
+            </Link>
+          </div>
         )}
       </section>
     </div>
