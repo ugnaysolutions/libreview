@@ -205,3 +205,63 @@ export async function generateNotifications(params: {
     .from("notifications")
     .upsert(rows, { onConflict: "user_id,dedup_key", ignoreDuplicates: true });
 }
+
+export async function triggerSessionNotifications(userId: string) {
+  try {
+    const supabase = await createClient();
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+
+    const [profileRes, targetsRes, progressRes, practiceCountRes, mockCountRes, notifCountRes] =
+      await Promise.all([
+        supabase
+          .from("user_profiles")
+          .select("plan, plan_expires_at, streak_count, last_session_date")
+          .eq("id", userId)
+          .single(),
+        supabase
+          .from("user_exam_targets")
+          .select("exam_type, exam_date")
+          .eq("user_id", userId),
+        supabase
+          .from("user_topic_progress")
+          .select("accuracy_percentage, total_attempts, topics(slug, name)")
+          .eq("user_id", userId),
+        supabase
+          .from("exam_sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("session_type", "topic_practice")
+          .eq("status", "completed")
+          .gte("started_at", sevenDaysAgo),
+        supabase
+          .from("exam_sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("session_type", "mock_exam")
+          .eq("status", "completed")
+          .gte("started_at", sevenDaysAgo),
+        supabase
+          .from("notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId),
+      ]);
+
+    const profile = profileRes.data;
+    if (!profile) return;
+
+    await generateNotifications({
+      userId,
+      plan: (profile.plan as string) ?? "free",
+      planExpiresAt: (profile.plan_expires_at as string | null) ?? null,
+      streakCount: (profile.streak_count as number) ?? 0,
+      lastSessionDate: (profile.last_session_date as string | null) ?? null,
+      examTargets: (targetsRes.data ?? []) as ExamTarget[],
+      topicProgress: (progressRes.data ?? []) as unknown as TopicProgress[],
+      thisWeekSessionCount: practiceCountRes.count ?? 0,
+      thisWeekMockCount: mockCountRes.count ?? 0,
+      existingNotificationCount: notifCountRes.count ?? 0,
+    });
+  } catch {
+    // Notification failures must never surface to users
+  }
+}

@@ -1,10 +1,12 @@
 "use server";
 
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { SCHOOL_EXAMS, FILIPINO_TOPIC_SLUGS } from "@/lib/constants";
 import { canStartMockExam, isPremium } from "@/lib/plan";
 import type { ExamType } from "@/lib/constants";
+import { triggerSessionNotifications } from "@/lib/generateNotifications";
 
 type Q = { id: string; topic_id: string; passage_id: string | null; passage_order: number | null };
 
@@ -291,4 +293,6 @@ export async function completeMockExamSession(
       .update({ streak_count: newStreak, last_session_date: today })
       .eq("id", user.id);
   }
+
+  after(() => triggerSessionNotifications(user.id));
 }

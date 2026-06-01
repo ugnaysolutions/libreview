@@ -1,10 +1,12 @@
 "use server";
 
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PRACTICE_SESSION_QUESTION_COUNT } from "@/lib/constants";
 import { canStartPractice, isPremium } from "@/lib/plan";
 import type { Choice, ReportReason } from "@/lib/supabase/types";
+import { triggerSessionNotifications } from "@/lib/generateNotifications";
 
 export async function startPracticeSession(
   topicId: string,
@@ -235,6 +237,8 @@ export async function completePracticeSession(sessionId: string) {
       })
       .eq("id", user.id);
   }
+
+  after(() => triggerSessionNotifications(user.id));
 }
 
 export async function reportQuestion(
