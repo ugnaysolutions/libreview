@@ -1,14 +1,13 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 
-export const runtime = "edge";
-
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
 
 export async function GET(req: NextRequest) {
+  try {
   const { searchParams } = req.nextUrl;
   const score = parseInt(searchParams.get("score") ?? "0", 10);
   const correct = searchParams.get("correct") ?? "0";
@@ -137,4 +136,11 @@ export async function GET(req: NextRequest) {
     ),
     { width: 1200, height: 630 }
   );
+  } catch (err) {
+    console.error("[score-card]", err);
+    return new Response(
+      `Score card error: ${err instanceof Error ? err.message : String(err)}`,
+      { status: 500, headers: { "content-type": "text/plain" } }
+    );
+  }
 }
