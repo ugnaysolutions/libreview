@@ -172,3 +172,21 @@ CREATE INDEX idx_session_answers_session ON session_answers(session_id);
 CREATE INDEX idx_user_topic_progress_user ON user_topic_progress(user_id);
 CREATE INDEX idx_user_topic_progress_topic ON user_topic_progress(topic_id);
 CREATE INDEX idx_question_reports_resolved ON question_reports(is_resolved, created_at DESC);
+
+-- ── wishlist_requests ──────────────────────────────────────────
+CREATE TYPE wishlist_category AS ENUM (
+  'new_university', 'new_topic', 'more_questions',
+  'feature_idea', 'bug_report', 'other'
+);
+
+CREATE TABLE wishlist_requests (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID REFERENCES user_profiles(id) ON DELETE CASCADE NOT NULL,
+  category    wishlist_category NOT NULL,
+  title       TEXT NOT NULL CHECK (char_length(title) <= 100),
+  description TEXT CHECK (char_length(description) <= 500),
+  is_reviewed BOOLEAN DEFAULT false,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_wishlist_user ON wishlist_requests(user_id, created_at DESC);

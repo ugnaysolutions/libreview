@@ -124,3 +124,12 @@ CREATE POLICY "resources_read_published" ON resources
 
 CREATE POLICY "resources_admin_all" ON resources
   FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin());
+
+-- ── wishlist_requests ──────────────────────────────────────────
+ALTER TABLE wishlist_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "wishlist_user_all" ON wishlist_requests
+  FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "wishlist_admin_read" ON wishlist_requests
+  FOR SELECT TO authenticated USING (is_admin());

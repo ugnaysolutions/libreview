@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap } from "lucide-react";
+import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/app/actions/auth";
 import { NotificationBell, type Notification } from "@/components/nav/NotificationBell";
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/mock-exam", label: "Mock Exam", Icon: ClipboardList },
   { href: "/resources", label: "Resources", Icon: PlayCircle },
   { href: "/progress", label: "Progress", Icon: BarChart2 },
+  { href: "/wishlist", label: "Wishlist", Icon: Sparkles },
 ];
 
 interface User {
