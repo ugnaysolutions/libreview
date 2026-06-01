@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, ChevronRight } from "lucide-react";
+import { Sparkles, ChevronRight, Target } from "lucide-react";
 import { ExamTargetsManager } from "@/components/settings/ExamTargetsManager";
+import { WeeklyGoalSetter } from "@/components/settings/WeeklyGoalSetter";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -12,7 +13,7 @@ export default async function SettingsPage() {
   const [profileRes, targetsRes] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("full_name, avatar_url")
+      .select("full_name, avatar_url, weekly_goal")
       .eq("id", user.id)
       .single(),
     supabase
@@ -50,6 +51,23 @@ export default async function SettingsPage() {
           </p>
         </div>
         <ExamTargetsManager targets={targets} />
+      </section>
+
+      {/* Weekly Goal */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Weekly Practice Goal</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Set a target number of practice sessions per week.
+          </p>
+        </div>
+        <div className="rounded-xl border border-border p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-sm font-medium text-foreground">Sessions per week</span>
+          </div>
+          <WeeklyGoalSetter current={(profile as unknown as { weekly_goal: number | null })?.weekly_goal ?? null} />
+        </div>
       </section>
 
       {/* Feedback & Ideas */}

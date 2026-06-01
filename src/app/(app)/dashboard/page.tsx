@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Zap,
   Target,
+  Trophy,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -63,12 +64,17 @@ export default async function DashboardPage() {
 
   // Parallel data fetch
   const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const daysFromMonday = now.getDay() === 0 ? 6 : now.getDay() - 1;
+  const weekStart = new Date(now);
+  weekStart.setDate(weekStart.getDate() - daysFromMonday);
+  weekStart.setHours(0, 0, 0, 0);
 
-  const [profileRes, subtestsRes, progressRes, sessionsRes, premium, dailyCompletionRes, examTargetsRes] = await Promise.all(
+  const [profileRes, subtestsRes, progressRes, sessionsRes, premium, dailyCompletionRes, examTargetsRes, weeklySessionsRes] = await Promise.all(
     [
       supabase
         .from("user_profiles")
-        .select("full_name, avatar_url, streak_count, last_session_date, target_exam_date, streak_freeze_used, streak_freeze_month, universities(name)")
+        .select("full_name, avatar_url, streak_count, last_session_date, target_exam_date, streak_freeze_used, streak_freeze_month, weekly_goal, universities(name)")
         .eq("id", user.id)
         .single(),
       supabase
@@ -101,6 +107,12 @@ export default async function DashboardPage() {
         .select("id, exam_type, exam_date")
         .eq("user_id", user.id)
         .order("exam_date"),
+      supabase
+        .from("exam_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "completed")
+        .gte("completed_at", weekStart.toISOString()),
     ]
   );
 
@@ -110,6 +122,8 @@ export default async function DashboardPage() {
   const sessions = sessionsRes.data ?? [];
   const dailyCompletion = dailyCompletionRes.data ?? null;
   const examTargets = examTargetsRes.data ?? [];
+  const weeklyGoal = (profile as unknown as { weekly_goal: number | null })?.weekly_goal ?? null;
+  const weeklySessionsDone = weeklySessionsRes.count ?? 0;
 
   if (!profile) redirect("/onboarding");
 
@@ -292,6 +306,57 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Weekly Goal ─────────────────────────────────────────── */}
+      {weeklyGoal ? (
+        <Card className="rounded-2xl border-border shadow-sm">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {weeklySessionsDone >= weeklyGoal
+                  ? <Trophy className="h-4 w-4 text-amber-500" />
+                  : <Target className="h-4 w-4 text-primary" />
+                }
+                <span className="text-sm font-semibold text-foreground">Weekly Goal</span>
+              </div>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {Math.min(weeklySessionsDone, weeklyGoal)} / {weeklyGoal} sessions
+              </span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <div
+                className={cn(
+                  "h-2 rounded-full transition-all duration-500",
+                  weeklySessionsDone >= weeklyGoal ? "bg-amber-400" : "bg-primary"
+                )}
+                style={{ width: `${Math.min((weeklySessionsDone / weeklyGoal) * 100, 100)}%` }}
+              />
+            </div>
+            {weeklySessionsDone >= weeklyGoal ? (
+              <p className="text-xs text-amber-600 font-medium">Goal reached this week! 🎉</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {weeklyGoal - weeklySessionsDone} more session{weeklyGoal - weeklySessionsDone > 1 ? "s" : ""} to reach your goal
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Link href="/settings">
+          <Card className="rounded-2xl border-dashed border-border shadow-sm hover:border-primary/40 hover:bg-muted/30 transition-all">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                <Target className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">Set a weekly goal</p>
+                <p className="text-xs text-muted-foreground">Challenge yourself to practice consistently</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* ── Exam Targets Carousel ─────────────────────────────── */}
       <ExamTargetsCarousel
