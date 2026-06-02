@@ -358,7 +358,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <Link href="/settings">
+        <Link href="/settings" className="block">
           <Card className="rounded-2xl border-dashed border-border shadow-sm hover:border-primary/40 hover:bg-muted/30 transition-all">
             <CardContent className="p-4 flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center shrink-0">
