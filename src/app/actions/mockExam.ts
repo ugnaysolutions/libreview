@@ -48,8 +48,13 @@ function selectFromPool(available: Q[], itemCount: number, usedIds: Set<string>)
 
 export async function startMockExamSession(
   examType: ExamType = "upcat",
-  mode: QuestionSetMode = "random"
-): Promise<{ error: "DAILY_LIMIT_REACHED" | "NOT_ENOUGH_QUESTIONS" } | void> {
+  modes: QuestionSetMode[] = ["random"],
+  forceBackfill: boolean = false
+): Promise<
+  | { error: "DAILY_LIMIT_REACHED" | "NOT_ENOUGH_QUESTIONS" }
+  | { error: "BACKFILL_NEEDED"; available: number; total: number }
+  | void
+> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -60,11 +65,14 @@ export async function startMockExamSession(
     return { error: "DAILY_LIMIT_REACHED" };
   }
 
-  // Resolve allowed question IDs for non-random modes
+  // Resolve allowed question IDs for filter modes
   let allowedIds: Set<string> | null = null;
+  const hasFilterMode = modes.some((m) => m === "wrong" || m === "bookmarked");
 
-  if (mode === "wrong" || mode === "bookmarked") {
-    if (mode === "wrong") {
+  if (hasFilterMode) {
+    allowedIds = new Set<string>();
+
+    if (modes.includes("wrong")) {
       const { data: sessions } = await supabase
         .from("exam_sessions")
         .select("id")
@@ -77,17 +85,18 @@ export async function startMockExamSession(
           .select("question_id")
           .in("session_id", sessionIds)
           .eq("is_correct", false);
-        allowedIds = new Set((wrongAnswers ?? []).map((a) => a.question_id));
-      } else {
-        allowedIds = new Set();
+        (wrongAnswers ?? []).forEach((a) => allowedIds!.add(a.question_id));
       }
-    } else {
+    }
+
+    if (modes.includes("bookmarked")) {
       const { data: bookmarks } = await supabase
         .from("bookmarked_questions")
         .select("question_id")
         .eq("user_id", user.id);
-      allowedIds = new Set((bookmarks ?? []).map((b) => b.question_id));
+      (bookmarks ?? []).forEach((b) => allowedIds!.add(b.question_id));
     }
+
     if (!allowedIds || allowedIds.size === 0) return { error: "NOT_ENOUGH_QUESTIONS" };
   }
 
@@ -121,7 +130,7 @@ export async function startMockExamSession(
       const otherTopicIds = allTopics
         .filter((t) => !FILIPINO_TOPIC_SLUGS.includes(t.slug))
         .map((t) => t.id);
-      const filipinoTarget = Math.round(itemCount * 0.25); // 3
+      const filipinoTarget = Math.round(itemCount * 0.25);
 
       subtestConfigs.push({
         itemCount: filipinoTarget,
@@ -129,7 +138,7 @@ export async function startMockExamSession(
         shortfallTopicIds: otherTopicIds,
       });
       subtestConfigs.push({
-        itemCount: itemCount - filipinoTarget, // 9
+        itemCount: itemCount - filipinoTarget,
         topicIds: otherTopicIds,
       });
 
@@ -148,7 +157,6 @@ export async function startMockExamSession(
     }
   }
 
-  // Deduplicate topic IDs before querying
   const uniqueTopicIds = [...new Set(allTopicIds)];
 
   const userIsPremium = await isPremium(user.id);
@@ -164,6 +172,18 @@ export async function startMockExamSession(
   const { data: allQuestions } = await questionsQuery.limit(examConfig.totalItems * 8);
 
   if (!allQuestions || allQuestions.length === 0) throw new Error("No questions available");
+
+  // Backfill check: if filter pool doesn't cover the full exam, prompt the user
+  if (allowedIds && !forceBackfill) {
+    const overlapCount = (allQuestions as Q[]).filter((q) => allowedIds!.has(q.id)).length;
+    if (overlapCount < examConfig.totalItems) {
+      return {
+        error: "BACKFILL_NEEDED",
+        available: overlapCount,
+        total: examConfig.totalItems,
+      };
+    }
+  }
 
   const questionsByTopic = new Map<string, Q[]>();
   for (const q of allQuestions as Q[]) {

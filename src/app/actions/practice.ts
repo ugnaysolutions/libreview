@@ -14,8 +14,13 @@ export async function startPracticeSession(
   subtestSlug: string,
   topicSlug: string,
   timedMode: boolean = false,
-  mode: QuestionSetMode = "random"
-): Promise<{ error: "DAILY_LIMIT_REACHED" | "NOT_ENOUGH_QUESTIONS" } | void> {
+  modes: QuestionSetMode[] = ["random"],
+  forceBackfill: boolean = false
+): Promise<
+  | { error: "DAILY_LIMIT_REACHED" | "NOT_ENOUGH_QUESTIONS" }
+  | { error: "BACKFILL_NEEDED"; available: number; total: number }
+  | void
+> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -28,11 +33,14 @@ export async function startPracticeSession(
 
   const userIsPremium = await isPremium(user.id);
 
-  // Resolve filtered question ID set for non-random modes
+  // Resolve filtered question ID set for filter modes (wrong / bookmarked)
   let allowedIds: Set<string> | null = null;
+  const hasFilterMode = modes.some((m) => m === "wrong" || m === "bookmarked");
 
-  if (mode === "wrong" || mode === "bookmarked") {
-    if (mode === "wrong") {
+  if (hasFilterMode) {
+    allowedIds = new Set<string>();
+
+    if (modes.includes("wrong")) {
       const { data: sessions } = await supabase
         .from("exam_sessions")
         .select("id")
@@ -46,16 +54,16 @@ export async function startPracticeSession(
           .select("question_id")
           .in("session_id", sessionIds)
           .eq("is_correct", false);
-        allowedIds = new Set((wrongAnswers ?? []).map((a) => a.question_id));
-      } else {
-        allowedIds = new Set();
+        (wrongAnswers ?? []).forEach((a) => allowedIds!.add(a.question_id));
       }
-    } else {
+    }
+
+    if (modes.includes("bookmarked")) {
       const { data: bookmarks } = await supabase
         .from("bookmarked_questions")
         .select("question_id")
         .eq("user_id", user.id);
-      allowedIds = new Set((bookmarks ?? []).map((b) => b.question_id));
+      (bookmarks ?? []).forEach((b) => allowedIds!.add(b.question_id));
     }
 
     if (allowedIds.size === 0) return { error: "NOT_ENOUGH_QUESTIONS" };
@@ -69,28 +77,26 @@ export async function startPracticeSession(
 
   if (!userIsPremium) questionsQuery = questionsQuery.eq("is_premium", false);
 
-  if (mode === "new") {
+  const isNewMode = modes.includes("new") && modes.length === 1;
+  if (isNewMode) {
     questionsQuery = questionsQuery.order("created_at", { ascending: false });
   }
 
-  const { data: rawQuestions } = await questionsQuery.limit(mode === "new" ? PRACTICE_SESSION_QUESTION_COUNT * 2 : 50);
+  const { data: rawQuestions } = await questionsQuery.limit(
+    isNewMode ? PRACTICE_SESSION_QUESTION_COUNT * 2 : 50
+  );
 
   const questions = allowedIds
     ? (rawQuestions ?? []).filter((q) => allowedIds!.has(q.id))
     : (rawQuestions ?? []);
 
   if (!questions || questions.length === 0) {
-    if (mode !== "random") return { error: "NOT_ENOUGH_QUESTIONS" };
-    throw new Error("No questions available for this topic");
-  }
-
-  const MIN_QUESTIONS = 3;
-  if (mode !== "random" && questions.length < MIN_QUESTIONS) {
+    if (!hasFilterMode && !isNewMode) throw new Error("No questions available for this topic");
     return { error: "NOT_ENOUGH_QUESTIONS" };
   }
 
-  // "new" mode: just take the most recent questions, no shuffle needed
-  if (mode === "new") {
+  // "new" mode: take most recent, no shuffle
+  if (isNewMode) {
     const questionIds = questions.slice(0, PRACTICE_SESSION_QUESTION_COUNT).map((q) => q.id);
     const { data: session, error } = await supabase
       .from("exam_sessions")
@@ -109,7 +115,16 @@ export async function startPracticeSession(
     redirect(`/practice/${subtestSlug}/${topicSlug}/session?session=${session.id}`);
   }
 
-  // Group questions by passage; sort each group by passage_order ASC (parent = 1, children = 2+)
+  // Check if filtered pool is short — prompt user to backfill with random
+  if (allowedIds && questions.length < PRACTICE_SESSION_QUESTION_COUNT && !forceBackfill) {
+    return {
+      error: "BACKFILL_NEEDED",
+      available: questions.length,
+      total: PRACTICE_SESSION_QUESTION_COUNT,
+    };
+  }
+
+  // Group by passage; sort each group by passage_order ASC
   type Q = { id: string; passage_id: string | null; passage_order: number | null };
   const groupMap = new Map<string, Q[]>();
   for (const q of questions as Q[]) {
@@ -122,8 +137,7 @@ export async function startPracticeSession(
     g.sort((a, b) => (a.passage_order ?? 0) - (b.passage_order ?? 0));
   }
 
-  // Shuffle groups, then greedily fill to session limit
-  // Full group preferred; if only 1 slot remains, include the parent only (never children alone)
+  // Shuffle groups, greedily fill to session limit from filtered pool
   const groups = [...groupMap.values()].sort(() => Math.random() - 0.5);
   const questionIds: string[] = [];
   for (const group of groups) {
@@ -132,7 +146,37 @@ export async function startPracticeSession(
     if (group.length <= remaining) {
       questionIds.push(...group.map((q) => q.id));
     } else if (remaining >= 1) {
-      questionIds.push(group[0].id); // parent only as fallback
+      questionIds.push(group[0].id);
+    }
+  }
+
+  // Backfill remaining slots from random pool (when forceBackfill or allowedIds is null)
+  if (questionIds.length < PRACTICE_SESSION_QUESTION_COUNT) {
+    const usedIds = new Set(questionIds);
+    const randomPool = (rawQuestions ?? []).filter(
+      (q) => !usedIds.has(q.id) && (!allowedIds || !allowedIds.has(q.id))
+    ) as Q[];
+
+    // Group random pool by passage too
+    const randGroupMap = new Map<string, Q[]>();
+    for (const q of randomPool) {
+      const key = q.passage_id ?? `solo-${q.id}`;
+      const g = randGroupMap.get(key) ?? [];
+      g.push(q);
+      randGroupMap.set(key, g);
+    }
+    for (const g of randGroupMap.values()) {
+      g.sort((a, b) => (a.passage_order ?? 0) - (b.passage_order ?? 0));
+    }
+    const randGroups = [...randGroupMap.values()].sort(() => Math.random() - 0.5);
+    for (const group of randGroups) {
+      if (questionIds.length >= PRACTICE_SESSION_QUESTION_COUNT) break;
+      const remaining = PRACTICE_SESSION_QUESTION_COUNT - questionIds.length;
+      if (group.length <= remaining) {
+        questionIds.push(...group.map((q) => q.id));
+      } else if (remaining >= 1) {
+        questionIds.push(group[0].id);
+      }
     }
   }
 

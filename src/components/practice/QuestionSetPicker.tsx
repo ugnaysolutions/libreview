@@ -19,21 +19,21 @@ const ALL_MODES: ModeOption[] = [
 ];
 
 interface Props {
-  mode: QuestionSetMode;
-  onSelect: (mode: QuestionSetMode) => void;
+  modes: QuestionSetMode[];
+  onToggle: (mode: QuestionSetMode) => void;
   bookmarkedCount?: number;
   includeNew?: boolean;
-  errorMode?: QuestionSetMode | null;
+  errorModes?: QuestionSetMode[];
 }
 
 export function QuestionSetPicker({
-  mode,
-  onSelect,
+  modes,
+  onToggle,
   bookmarkedCount,
   includeNew = true,
-  errorMode = null,
+  errorModes = [],
 }: Props) {
-  const modes = includeNew ? ALL_MODES : ALL_MODES.filter((m) => m.id !== "new");
+  const visibleModes = includeNew ? ALL_MODES : ALL_MODES.filter((m) => m.id !== "new");
 
   return (
     <div className="space-y-2">
@@ -41,16 +41,16 @@ export function QuestionSetPicker({
         Question Set
       </p>
       <div className="grid grid-cols-2 gap-2">
-        {modes.map(({ id, label, icon: Icon, desc }) => {
-          const isSelected = mode === id;
+        {visibleModes.map(({ id, label, icon: Icon, desc }) => {
+          const isSelected = modes.includes(id);
           const isBookmarked = id === "bookmarked";
           const isEmpty = isBookmarked && bookmarkedCount !== undefined && bookmarkedCount === 0;
-          const hasError = errorMode === id;
+          const hasError = (errorModes ?? []).includes(id);
 
           return (
             <button
               key={id}
-              onClick={() => !isEmpty && onSelect(id)}
+              onClick={() => !isEmpty && onToggle(id)}
               disabled={isEmpty}
               className={cn(
                 "flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all",
@@ -100,6 +100,11 @@ export function QuestionSetPicker({
           );
         })}
       </div>
+      {modes.length > 1 && (
+        <p className="text-[10px] text-muted-foreground">
+          Questions from all selected sets will be combined.
+        </p>
+      )}
     </div>
   );
 }
