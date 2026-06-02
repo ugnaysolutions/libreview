@@ -27,3 +27,31 @@ export async function setWeeklyGoal(goal: number | null): Promise<ActionResult> 
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
+
+const USERNAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_]{2,19}$/;
+
+export async function updateUsername(
+  username: string
+): Promise<{ error: "taken" | "invalid" } | void> {
+  if (!USERNAME_REGEX.test(username)) return { error: "invalid" };
+
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) redirect("/login");
+
+    const { error } = await supabase
+      .from("user_profiles")
+      .update({ username })
+      .eq("id", user.id);
+
+    if (error?.code === "23505") return { error: "taken" };
+    if (error) throw new Error(error.message);
+
+    revalidatePath("/settings");
+    revalidatePath("/leaderboard");
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    throw err;
+  }
+}

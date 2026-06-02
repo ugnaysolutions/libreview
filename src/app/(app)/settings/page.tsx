@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Sparkles, ChevronRight, Target } from "lucide-react";
 import { ExamTargetsManager } from "@/components/settings/ExamTargetsManager";
 import { WeeklyGoalSetter } from "@/components/settings/WeeklyGoalSetter";
+import { UsernameEditor } from "@/components/settings/UsernameEditor";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -13,7 +14,7 @@ export default async function SettingsPage() {
   const [profileRes, targetsRes] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("full_name, avatar_url, weekly_goal")
+      .select("full_name, avatar_url, weekly_goal, username")
       .eq("id", user.id)
       .single(),
     supabase
@@ -33,12 +34,19 @@ export default async function SettingsPage() {
         <p className="text-sm text-muted-foreground mt-0.5">Manage your profile and exam targets.</p>
       </div>
 
-      {/* Profile (read-only for now) */}
-      <section className="space-y-2">
+      {/* Profile */}
+      <section className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">Profile</h2>
         <div className="text-sm text-muted-foreground space-y-0.5">
           <p>{profile?.full_name ?? "—"}</p>
           <p className="text-xs">{user.email}</p>
+        </div>
+        <div className="rounded-xl border border-border p-4 space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Username</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Shown on the leaderboard</p>
+          </div>
+          <UsernameEditor currentUsername={(profile as unknown as { username: string | null })?.username ?? null} />
         </div>
       </section>
 

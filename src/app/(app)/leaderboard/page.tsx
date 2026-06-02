@@ -58,7 +58,7 @@ export default async function LeaderboardPage() {
   // Fetch profiles for ranked users
   const rankedIds = sorted.map((e) => e.userId);
   const { data: profiles } = rankedIds.length > 0
-    ? await admin.from("user_profiles").select("id, full_name, avatar_url").in("id", rankedIds)
+    ? await admin.from("user_profiles").select("id, full_name, username, avatar_url").in("id", rankedIds)
     : { data: [] };
 
   const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
@@ -66,7 +66,9 @@ export default async function LeaderboardPage() {
   const entries = sorted.map((e, i) => ({
     rank: i + 1,
     userId: e.userId,
-    name: profileMap.get(e.userId)?.full_name ?? "Unknown",
+    name: profileMap.get(e.userId)?.username
+      ?? profileMap.get(e.userId)?.full_name?.split(" ")[0]
+      ?? "Anonymous",
     avatarUrl: profileMap.get(e.userId)?.avatar_url ?? null,
     score: e.score,
     correct: e.correct,

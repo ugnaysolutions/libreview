@@ -19,7 +19,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { UNIVERSITY_EXAM_MAP } from "@/lib/constants";
 
+const USERNAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_]{2,19}$/;
+
 const schema = z.object({
+  username: z
+    .string()
+    .min(3, "Must be at least 3 characters")
+    .max(20, "Must be at most 20 characters")
+    .regex(USERNAME_REGEX, "Letters, numbers, underscores only. Cannot start with underscore."),
   targetExamDate: z.string().min(1, "Please select your target exam date"),
   targetUniversityId: z.string().min(1, "Please select a target university"),
 });
@@ -48,6 +55,7 @@ export function OnboardingForm({
     register,
     handleSubmit,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -57,8 +65,24 @@ export function OnboardingForm({
   async function onSubmit(values: FormValues) {
     setSaving(true);
     const supabase = createClient();
+
+    // Check username availability (exclude current user in case of re-submit)
+    const { data: existing } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .ilike("username", values.username)
+      .neq("id", userId)
+      .maybeSingle();
+
+    if (existing) {
+      setError("username", { message: "Username already taken. Please choose another." });
+      setSaving(false);
+      return;
+    }
+
     const { error } = await supabase.from("user_profiles").upsert({
       id: userId,
+      username: values.username,
       target_exam_date: values.targetExamDate,
       target_university_id: values.targetUniversityId,
     });
@@ -89,6 +113,26 @@ export function OnboardingForm({
       onSubmit={handleSubmit(onSubmit)}
       className="bg-white rounded-2xl border border-border shadow-sm p-6 space-y-5"
     >
+      <div className="space-y-2">
+        <Label htmlFor="username">Username</Label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm select-none">@</span>
+          <Input
+            id="username"
+            {...register("username")}
+            placeholder="your_username"
+            className="rounded-xl pl-7"
+            maxLength={20}
+            autoComplete="off"
+          />
+        </div>
+        {errors.username ? (
+          <p className="text-xs text-destructive">{errors.username.message}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">Shown on the leaderboard. 3–20 characters.</p>
+        )}
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="targetExamDate">Target exam date</Label>
         <Input
