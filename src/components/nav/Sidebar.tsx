@@ -156,6 +156,10 @@ export function Sidebar({ user, isPremium, unreadCount, notifications }: Sidebar
             Sign out
           </button>
         </form>
+
+        <p className="text-[10px] text-muted-foreground/60 text-center pt-1">
+          Ugnay Solutions
+        </p>
       </div>
     </aside>
   );
