@@ -44,7 +44,7 @@ export default async function LoginPage({
 
         <p className="text-center text-xs text-muted-foreground">
           Powered by{" "}
-          <span className="font-medium text-foreground/60">Ugnay Solutions</span>
+          <span className="font-medium text-foreground/60">Ugnay Solutions PH</span>
         </p>
       </div>
     </div>

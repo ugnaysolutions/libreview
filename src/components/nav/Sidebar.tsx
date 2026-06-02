@@ -158,7 +158,7 @@ export function Sidebar({ user, isPremium, unreadCount, notifications }: Sidebar
         </form>
 
         <p className="text-[10px] text-muted-foreground/60 text-center pt-1">
-          Ugnay Solutions
+          Ugnay Solutions PH
         </p>
       </div>
     </aside>
