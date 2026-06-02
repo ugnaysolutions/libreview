@@ -234,14 +234,14 @@ export default async function MockExamPage({
         </div>
       ) : existing ? (
         <div className="space-y-3">
-          <StartMockExamButton existingSessionId={existing.id} examType={examType} />
+          <StartMockExamButton existingSessionId={existing.id} examType={examType} premium={premium} />
           <p className="text-center text-xs text-muted-foreground">
             You have an in-progress exam. Resuming will continue from where you
             left off.
           </p>
         </div>
       ) : (
-        <StartMockExamButton examType={examType} />
+        <StartMockExamButton examType={examType} premium={premium} />
       )}
     </div>
   );

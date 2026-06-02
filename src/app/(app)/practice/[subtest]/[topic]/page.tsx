@@ -28,7 +28,7 @@ export default async function TopicPage({
 
   if (!topic) notFound();
 
-  const [questionCountRes, progressRes, premium] = await Promise.all([
+  const [questionCountRes, progressRes, premium, bookmarkedRes] = await Promise.all([
     supabase
       .from("questions")
       .select("id", { count: "exact", head: true })
@@ -41,10 +41,16 @@ export default async function TopicPage({
       .eq("topic_id", topic.id)
       .maybeSingle(),
     isPremium(user.id),
+    supabase
+      .from("bookmarked_questions")
+      .select("id, questions!inner(topic_id)")
+      .eq("user_id", user.id)
+      .eq("questions.topic_id", topic.id),
   ]);
 
   const questionCount = questionCountRes.count ?? 0;
   const progress = progressRes.data;
+  const bookmarkedCount = (bookmarkedRes.data ?? []).length;
   const accuracy = progress ? Math.round(Number(progress.accuracy_percentage)) : 0;
   const subtest = topic.subtests as unknown as { name: string; slug: string };
   const sessionQuestionCount = Math.min(
@@ -127,6 +133,7 @@ export default async function TopicPage({
         disabled={questionCount === 0}
         premium={premium}
         sessionQuestionCount={sessionQuestionCount}
+        bookmarkedCount={bookmarkedCount}
       />
 
       {questionCount === 0 && (

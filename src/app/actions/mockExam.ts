@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { SCHOOL_EXAMS, FILIPINO_TOPIC_SLUGS } from "@/lib/constants";
 import { canStartMockExam, isPremium } from "@/lib/plan";
-import type { ExamType } from "@/lib/constants";
+import type { ExamType, QuestionSetMode } from "@/lib/constants";
 import { triggerSessionNotifications } from "@/lib/generateNotifications";
 
 type Q = { id: string; topic_id: string; passage_id: string | null; passage_order: number | null };
@@ -47,8 +47,9 @@ function selectFromPool(available: Q[], itemCount: number, usedIds: Set<string>)
 }
 
 export async function startMockExamSession(
-  examType: ExamType = "upcat"
-): Promise<{ error: "DAILY_LIMIT_REACHED" } | void> {
+  examType: ExamType = "upcat",
+  mode: QuestionSetMode = "random"
+): Promise<{ error: "DAILY_LIMIT_REACHED" | "NOT_ENOUGH_QUESTIONS" } | void> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -57,6 +58,37 @@ export async function startMockExamSession(
 
   if (!(await canStartMockExam(user.id))) {
     return { error: "DAILY_LIMIT_REACHED" };
+  }
+
+  // Resolve allowed question IDs for non-random modes
+  let allowedIds: Set<string> | null = null;
+
+  if (mode === "wrong" || mode === "bookmarked") {
+    if (mode === "wrong") {
+      const { data: sessions } = await supabase
+        .from("exam_sessions")
+        .select("id")
+        .eq("user_id", user.id)
+        .limit(150);
+      const sessionIds = (sessions ?? []).map((s) => s.id);
+      if (sessionIds.length > 0) {
+        const { data: wrongAnswers } = await supabase
+          .from("session_answers")
+          .select("question_id")
+          .in("session_id", sessionIds)
+          .eq("is_correct", false);
+        allowedIds = new Set((wrongAnswers ?? []).map((a) => a.question_id));
+      } else {
+        allowedIds = new Set();
+      }
+    } else {
+      const { data: bookmarks } = await supabase
+        .from("bookmarked_questions")
+        .select("question_id")
+        .eq("user_id", user.id);
+      allowedIds = new Set((bookmarks ?? []).map((b) => b.question_id));
+    }
+    if (!allowedIds || allowedIds.size === 0) return { error: "NOT_ENOUGH_QUESTIONS" };
   }
 
   const examConfig = SCHOOL_EXAMS[examType];
@@ -145,8 +177,20 @@ export async function startMockExamSession(
   const subtestQuestions: string[][] = [];
 
   for (const { itemCount, topicIds, shortfallTopicIds } of subtestConfigs) {
-    const available = topicIds.flatMap((tid) => questionsByTopic.get(tid) ?? []);
-    const ids = selectFromPool(available, itemCount, usedIds);
+    const allAvailable = topicIds.flatMap((tid) => questionsByTopic.get(tid) ?? []);
+
+    let ids: string[];
+    if (allowedIds) {
+      // Prefer allowed questions, backfill with random from the same pool
+      const allowedPool = allAvailable.filter((q) => allowedIds!.has(q.id));
+      ids = selectFromPool(allowedPool, itemCount, usedIds);
+      if (ids.length < itemCount) {
+        const randomPool = allAvailable.filter((q) => !allowedIds!.has(q.id));
+        ids.push(...selectFromPool(randomPool, itemCount - ids.length, usedIds));
+      }
+    } else {
+      ids = selectFromPool(allAvailable, itemCount, usedIds);
+    }
 
     // Backfill shortfall from fallback pool (e.g. Filipino → non-Filipino)
     if (ids.length < itemCount && shortfallTopicIds) {

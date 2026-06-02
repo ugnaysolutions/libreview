@@ -1,0 +1,105 @@
+"use client";
+
+import { Shuffle, Sparkles, RotateCcw, Bookmark } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { QuestionSetMode } from "@/lib/constants";
+
+interface ModeOption {
+  id: QuestionSetMode;
+  label: string;
+  icon: React.ElementType;
+  desc: string;
+}
+
+const ALL_MODES: ModeOption[] = [
+  { id: "random",     label: "Random",       icon: Shuffle,    desc: "Any approved questions" },
+  { id: "new",        label: "New",           icon: Sparkles,   desc: "Recently added" },
+  { id: "wrong",      label: "Review Wrong",  icon: RotateCcw,  desc: "Past incorrect answers" },
+  { id: "bookmarked", label: "Bookmarked",    icon: Bookmark,   desc: "Your saved questions" },
+];
+
+interface Props {
+  mode: QuestionSetMode;
+  onSelect: (mode: QuestionSetMode) => void;
+  bookmarkedCount?: number;
+  includeNew?: boolean;
+  errorMode?: QuestionSetMode | null;
+}
+
+export function QuestionSetPicker({
+  mode,
+  onSelect,
+  bookmarkedCount,
+  includeNew = true,
+  errorMode = null,
+}: Props) {
+  const modes = includeNew ? ALL_MODES : ALL_MODES.filter((m) => m.id !== "new");
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        Question Set
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {modes.map(({ id, label, icon: Icon, desc }) => {
+          const isSelected = mode === id;
+          const isBookmarked = id === "bookmarked";
+          const isEmpty = isBookmarked && bookmarkedCount !== undefined && bookmarkedCount === 0;
+          const hasError = errorMode === id;
+
+          return (
+            <button
+              key={id}
+              onClick={() => !isEmpty && onSelect(id)}
+              disabled={isEmpty}
+              className={cn(
+                "flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all",
+                isSelected && !hasError
+                  ? "border-primary bg-primary/5"
+                  : hasError
+                  ? "border-red-300 bg-red-50"
+                  : isEmpty
+                  ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
+                  : "border-border bg-card hover:border-primary/40 hover:bg-muted/30"
+              )}
+            >
+              <div
+                className={cn(
+                  "h-7 w-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
+                  isSelected && !hasError ? "bg-primary/10" : hasError ? "bg-red-100" : "bg-muted"
+                )}
+              >
+                <Icon
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    isSelected && !hasError ? "text-primary" : hasError ? "text-red-500" : "text-muted-foreground"
+                  )}
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p
+                    className={cn(
+                      "text-xs font-semibold",
+                      isSelected && !hasError ? "text-primary" : hasError ? "text-red-600" : "text-foreground"
+                    )}
+                  >
+                    {label}
+                  </p>
+                  {isBookmarked && bookmarkedCount !== undefined && bookmarkedCount > 0 && (
+                    <span className="text-[10px] font-medium bg-primary/10 text-primary rounded-full px-1.5 py-0">
+                      {bookmarkedCount}
+                    </span>
+                  )}
+                </div>
+                <p className={cn("text-[10px] mt-0.5", hasError ? "text-red-500" : "text-muted-foreground")}>
+                  {hasError ? "Not enough questions" : isEmpty ? "None saved" : desc}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

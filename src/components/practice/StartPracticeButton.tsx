@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { startPracticeSession } from "@/app/actions/practice";
 import { DailyLimitModal } from "@/components/ui/DailyLimitModal";
+import { QuestionSetPicker } from "@/components/practice/QuestionSetPicker";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Loader2, Timer, Zap } from "lucide-react";
 import Link from "next/link";
 import { TIMED_PRACTICE_SECONDS_PER_QUESTION } from "@/lib/constants";
+import type { QuestionSetMode } from "@/lib/constants";
 
 interface Props {
   topicId: string;
@@ -16,6 +18,7 @@ interface Props {
   disabled?: boolean;
   premium: boolean;
   sessionQuestionCount: number;
+  bookmarkedCount?: number;
 }
 
 export function StartPracticeButton({
@@ -25,10 +28,13 @@ export function StartPracticeButton({
   disabled,
   premium,
   sessionQuestionCount,
+  bookmarkedCount,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [timedMode, setTimedMode] = useState(false);
+  const [mode, setMode] = useState<QuestionSetMode>("random");
+  const [errorMode, setErrorMode] = useState<QuestionSetMode | null>(null);
 
   const totalMinutes = Math.round(
     (sessionQuestionCount * TIMED_PRACTICE_SECONDS_PER_QUESTION) / 60
@@ -36,15 +42,19 @@ export function StartPracticeButton({
 
   async function handleStart() {
     setLoading(true);
+    setErrorMode(null);
     try {
       const result = await startPracticeSession(
         topicId,
         subtestSlug,
         topicSlug,
-        timedMode
+        timedMode,
+        mode
       );
       if (result?.error === "DAILY_LIMIT_REACHED") {
         setShowLimitModal(true);
+      } else if (result?.error === "NOT_ENOUGH_QUESTIONS") {
+        setErrorMode(mode);
       }
     } catch {
       // session created + redirect handled by server action
@@ -55,6 +65,19 @@ export function StartPracticeButton({
 
   return (
     <>
+      {/* Question set picker — premium only */}
+      {premium && (
+        <QuestionSetPicker
+          mode={mode}
+          onSelect={(m) => {
+            setMode(m);
+            setErrorMode(null);
+          }}
+          bookmarkedCount={bookmarkedCount}
+          errorMode={errorMode}
+        />
+      )}
+
       {/* Timed mode — premium toggle */}
       {premium ? (
         <div className="rounded-2xl border border-border p-4">

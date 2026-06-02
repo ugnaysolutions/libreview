@@ -6,14 +6,16 @@ import { redirect } from "next/navigation";
 import { PRACTICE_SESSION_QUESTION_COUNT } from "@/lib/constants";
 import { canStartPractice, isPremium } from "@/lib/plan";
 import type { Choice, ReportReason } from "@/lib/supabase/types";
+import type { QuestionSetMode } from "@/lib/constants";
 import { triggerSessionNotifications } from "@/lib/generateNotifications";
 
 export async function startPracticeSession(
   topicId: string,
   subtestSlug: string,
   topicSlug: string,
-  timedMode: boolean = false
-): Promise<{ error: "DAILY_LIMIT_REACHED" } | void> {
+  timedMode: boolean = false,
+  mode: QuestionSetMode = "random"
+): Promise<{ error: "DAILY_LIMIT_REACHED" | "NOT_ENOUGH_QUESTIONS" } | void> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -26,6 +28,39 @@ export async function startPracticeSession(
 
   const userIsPremium = await isPremium(user.id);
 
+  // Resolve filtered question ID set for non-random modes
+  let allowedIds: Set<string> | null = null;
+
+  if (mode === "wrong" || mode === "bookmarked") {
+    if (mode === "wrong") {
+      const { data: sessions } = await supabase
+        .from("exam_sessions")
+        .select("id")
+        .eq("user_id", user.id)
+        .limit(150);
+
+      const sessionIds = (sessions ?? []).map((s) => s.id);
+      if (sessionIds.length > 0) {
+        const { data: wrongAnswers } = await supabase
+          .from("session_answers")
+          .select("question_id")
+          .in("session_id", sessionIds)
+          .eq("is_correct", false);
+        allowedIds = new Set((wrongAnswers ?? []).map((a) => a.question_id));
+      } else {
+        allowedIds = new Set();
+      }
+    } else {
+      const { data: bookmarks } = await supabase
+        .from("bookmarked_questions")
+        .select("question_id")
+        .eq("user_id", user.id);
+      allowedIds = new Set((bookmarks ?? []).map((b) => b.question_id));
+    }
+
+    if (allowedIds.size === 0) return { error: "NOT_ENOUGH_QUESTIONS" };
+  }
+
   let questionsQuery = supabase
     .from("questions")
     .select("id, passage_id, passage_order")
@@ -34,10 +69,44 @@ export async function startPracticeSession(
 
   if (!userIsPremium) questionsQuery = questionsQuery.eq("is_premium", false);
 
-  const { data: questions } = await questionsQuery.limit(50);
+  if (mode === "new") {
+    questionsQuery = questionsQuery.order("created_at", { ascending: false });
+  }
+
+  const { data: rawQuestions } = await questionsQuery.limit(mode === "new" ? PRACTICE_SESSION_QUESTION_COUNT * 2 : 50);
+
+  const questions = allowedIds
+    ? (rawQuestions ?? []).filter((q) => allowedIds!.has(q.id))
+    : (rawQuestions ?? []);
 
   if (!questions || questions.length === 0) {
+    if (mode !== "random") return { error: "NOT_ENOUGH_QUESTIONS" };
     throw new Error("No questions available for this topic");
+  }
+
+  const MIN_QUESTIONS = 3;
+  if (mode !== "random" && questions.length < MIN_QUESTIONS) {
+    return { error: "NOT_ENOUGH_QUESTIONS" };
+  }
+
+  // "new" mode: just take the most recent questions, no shuffle needed
+  if (mode === "new") {
+    const questionIds = questions.slice(0, PRACTICE_SESSION_QUESTION_COUNT).map((q) => q.id);
+    const { data: session, error } = await supabase
+      .from("exam_sessions")
+      .insert({
+        user_id: user.id,
+        session_type: "topic_practice",
+        topic_id: topicId,
+        status: "in_progress",
+        total_questions: questionIds.length,
+        question_ids: questionIds,
+        timed_mode: timedMode,
+      })
+      .select("id")
+      .single();
+    if (error || !session) throw new Error("Failed to create session");
+    redirect(`/practice/${subtestSlug}/${topicSlug}/session?session=${session.id}`);
   }
 
   // Group questions by passage; sort each group by passage_order ASC (parent = 1, children = 2+)
