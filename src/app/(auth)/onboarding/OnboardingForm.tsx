@@ -111,7 +111,7 @@ export function OnboardingForm({
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="bg-white rounded-2xl border border-border shadow-sm p-6 space-y-5"
+      className="bg-card rounded-2xl border border-border shadow-sm p-6 space-y-5"
     >
       <div className="space-y-2">
         <Label htmlFor="username">Username</Label>

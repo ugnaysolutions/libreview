@@ -121,7 +121,7 @@ export function NotificationBell({ unreadCount, notifications, direction = "down
       {open && (
         <div
           className={cn(
-            "absolute z-[200] w-80 rounded-2xl border border-border bg-white shadow-xl",
+            "absolute z-[200] w-80 rounded-2xl border border-border bg-popover shadow-xl",
             align === "right" ? "right-0" : "left-0",
             direction === "up" ? "bottom-full mb-2" : "top-full mt-2"
           )}

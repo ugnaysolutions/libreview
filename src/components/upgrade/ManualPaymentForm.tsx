@@ -69,7 +69,7 @@ export function ManualPaymentForm({ plan, onPlanChange, hasPendingRequest }: Pro
             className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
               plan === p
                 ? "bg-primary text-white"
-                : "bg-white text-muted-foreground hover:bg-muted"
+                : "bg-background text-muted-foreground hover:bg-muted"
             }`}
           >
             {p === "monthly" ? `Monthly — ${PRICING.monthly.display}` : `Annual — ${PRICING.annual.display}`}

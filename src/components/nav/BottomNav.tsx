@@ -40,7 +40,7 @@ export function BottomNav({ user, isPremium, unreadCount, notifications }: Botto
   const firstName = user.name.split(" ")[0];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-border md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border md:hidden">
       {/* User identity bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/60">
         <Link

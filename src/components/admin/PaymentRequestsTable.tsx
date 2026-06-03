@@ -63,7 +63,7 @@ export function PaymentRequestsTable({ requests }: Props) {
           {requests.map((req) => {
             const loading = isPending && processingId === req.id;
             return (
-              <tr key={req.id} className="bg-white hover:bg-muted/30 transition-colors">
+              <tr key={req.id} className="bg-card hover:bg-muted/30 transition-colors">
                 <td className="px-4 py-3 text-foreground">{req.user_email ?? req.user_id}</td>
                 <td className="px-4 py-3 capitalize">{req.plan_type}</td>
                 <td className="px-4 py-3">₱{(req.amount_cents / 100).toFixed(0)}</td>

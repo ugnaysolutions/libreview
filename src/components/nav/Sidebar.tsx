@@ -42,7 +42,7 @@ export function Sidebar({ user, isPremium, unreadCount, notifications }: Sidebar
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex flex-col w-60 shrink-0 border-r border-border bg-white min-h-screen sticky top-0 h-screen">
+    <aside className="hidden md:flex flex-col w-60 shrink-0 border-r border-border bg-card min-h-screen sticky top-0 h-screen">
       <div className="flex items-center justify-between px-6 py-5 border-b border-border">
         <span className="text-xl font-bold text-primary font-heading">
           {APP_NAME}

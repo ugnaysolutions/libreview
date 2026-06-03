@@ -158,7 +158,7 @@ export function WishlistForm({ wishCount, premium }: Props) {
                 "flex items-start gap-2.5 p-3 rounded-2xl border text-left transition-all",
                 selected === cat.value
                   ? "border-primary ring-2 ring-primary/20 bg-primary/5"
-                  : "border-border hover:border-primary/40 bg-white"
+                  : "border-border hover:border-primary/40 bg-card"
               )}
             >
               <span
@@ -196,7 +196,7 @@ export function WishlistForm({ wishCount, premium }: Props) {
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, 100))}
               maxLength={100}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all placeholder:text-muted-foreground"
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all placeholder:text-muted-foreground"
             />
           </div>
 
@@ -216,7 +216,7 @@ export function WishlistForm({ wishCount, premium }: Props) {
               onChange={(e) => setDescription(e.target.value.slice(0, 500))}
               rows={3}
               maxLength={500}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none placeholder:text-muted-foreground"
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none placeholder:text-muted-foreground"
             />
           </div>
 

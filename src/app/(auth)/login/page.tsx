@@ -25,7 +25,7 @@ export default async function LoginPage({
           <p className="text-muted-foreground text-lg">{APP_TAGLINE}</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-border p-8 space-y-6">
+        <div className="bg-card rounded-2xl shadow-sm border border-border p-8 space-y-6">
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">
               Free college entrance test reviewer.

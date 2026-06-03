@@ -25,7 +25,7 @@ export function DailyLimitModal({ type, onClose }: Props) {
       />
 
       {/* Sheet */}
-      <div className="relative z-10 w-full max-w-sm mx-4 mb-6 sm:mb-0 bg-white rounded-2xl shadow-xl p-6 space-y-5">
+      <div className="relative z-10 w-full max-w-sm mx-4 mb-6 sm:mb-0 bg-card rounded-2xl shadow-xl p-6 space-y-5">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"

@@ -88,7 +88,7 @@ export default async function AdminUsersPage() {
               {rows.map((row, i) => (
                 <tr
                   key={row.id}
-                  className={i % 2 === 0 ? "bg-white" : "bg-muted/20"}
+                  className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}
                 >
                   <td className="px-4 py-3 font-medium text-foreground">{row.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{row.email}</td>

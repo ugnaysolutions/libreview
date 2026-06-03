@@ -75,7 +75,7 @@ export default async function WishlistPage() {
       </div>
 
       {/* Submission form */}
-      <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <WishlistForm wishCount={wishCount} premium={premium} />
       </div>
 
@@ -100,7 +100,7 @@ export default async function WishlistPage() {
               return (
                 <div
                   key={w.id}
-                  className="rounded-2xl border border-border bg-white p-4 flex items-start gap-3 border-l-[3px]"
+                  className="rounded-2xl border border-border bg-card p-4 flex items-start gap-3 border-l-[3px]"
                   style={{ borderLeftColor: meta.borderColor }}
                 >
                   <div className="flex-1 min-w-0">

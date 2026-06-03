@@ -5,6 +5,7 @@ import { Sparkles, ChevronRight, Target } from "lucide-react";
 import { ExamTargetsManager } from "@/components/settings/ExamTargetsManager";
 import { WeeklyGoalSetter } from "@/components/settings/WeeklyGoalSetter";
 import { UsernameEditor } from "@/components/settings/UsernameEditor";
+import { ThemeToggle } from "@/components/settings/ThemeToggle";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -48,6 +49,12 @@ export default async function SettingsPage() {
           </div>
           <UsernameEditor currentUsername={(profile as unknown as { username: string | null })?.username ?? null} />
         </div>
+      </section>
+
+      {/* Appearance */}
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-foreground">Appearance</h2>
+        <ThemeToggle />
       </section>
 
       {/* Exam Targets */}
