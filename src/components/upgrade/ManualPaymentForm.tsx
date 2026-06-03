@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import { PRICING } from "@/lib/constants";
 import { submitPaymentRequest } from "@/app/actions/paymentRequests";
 
@@ -82,22 +83,28 @@ export function ManualPaymentForm({ plan, onPlanChange, hasPendingRequest }: Pro
       </div>
 
       {/* GCash instructions */}
-      <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-2 text-sm">
-        <p className="font-semibold text-foreground">Pay via GCash</p>
-        <div className="space-y-1 text-muted-foreground">
-          <p>
-            Send <span className="font-semibold text-foreground">{pricing.display}</span> to:
-          </p>
-          <p>
-            GCash number: <span className="font-semibold text-foreground">{GCASH_NUMBER}</span>
-          </p>
-          <p>
-            Account name: <span className="font-semibold text-foreground">{GCASH_NAME}</span>
-          </p>
+      <div className="rounded-xl border border-border bg-muted/40 p-4">
+        <p className="text-sm font-semibold text-foreground mb-3">Pay via GCash / InstaPay</p>
+        <div className="flex gap-4 items-start">
+          <div className="flex-1 space-y-1 text-sm text-muted-foreground min-w-0">
+            <p>
+              Send <span className="font-semibold text-foreground">{pricing.display}</span> to:
+            </p>
+            <p>
+              GCash number: <span className="font-semibold text-foreground">{GCASH_NUMBER}</span>
+            </p>
+            <p>
+              Account name: <span className="font-semibold text-foreground">{GCASH_NAME}</span>
+            </p>
+            <p className="text-xs pt-1">
+              Include your email in the remarks so we can match your payment.
+            </p>
+          </div>
+          <div className="shrink-0 flex flex-col items-center gap-1">
+            <Image src="/gcash-qr.jpg" alt="InstaPay QR Code" width={110} height={110} className="rounded-lg" />
+            <p className="text-[10px] text-muted-foreground text-center">Scan to pay</p>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground pt-1">
-          In the remarks/message, include your email address so we can match your payment.
-        </p>
       </div>
 
       {/* Coming soon notice */}
