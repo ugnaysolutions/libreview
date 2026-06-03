@@ -19,6 +19,7 @@ interface Props {
   premium: boolean;
   sessionQuestionCount: number;
   bookmarkedCount?: number;
+  dueCount?: number;
 }
 
 export function StartPracticeButton({
@@ -29,6 +30,7 @@ export function StartPracticeButton({
   premium,
   sessionQuestionCount,
   bookmarkedCount,
+  dueCount,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
@@ -103,6 +105,7 @@ export function StartPracticeButton({
           modes={modes}
           onToggle={handleToggle}
           bookmarkedCount={bookmarkedCount}
+          dueCount={dueCount}
           errorModes={errorModes}
         />
       )}

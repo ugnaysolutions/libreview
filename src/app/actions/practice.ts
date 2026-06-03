@@ -8,6 +8,7 @@ import { canStartPractice, isPremium } from "@/lib/plan";
 import type { Choice, ReportReason } from "@/lib/supabase/types";
 import type { QuestionSetMode } from "@/lib/constants";
 import { triggerSessionNotifications } from "@/lib/generateNotifications";
+import { applySmTwo } from "@/lib/srs";
 
 export async function startPracticeSession(
   topicId: string,
@@ -33,9 +34,10 @@ export async function startPracticeSession(
 
   const userIsPremium = await isPremium(user.id);
 
-  // Resolve filtered question ID set for filter modes (wrong / bookmarked)
+  // Resolve filtered question ID set for filter modes (wrong / bookmarked / srs)
   let allowedIds: Set<string> | null = null;
-  const hasFilterMode = modes.some((m) => m === "wrong" || m === "bookmarked");
+  let srsScheduledIds: Set<string> | null = null;
+  const hasFilterMode = modes.some((m) => m === "wrong" || m === "bookmarked" || m === "srs");
 
   if (hasFilterMode) {
     allowedIds = new Set<string>();
@@ -66,7 +68,24 @@ export async function startPracticeSession(
       (bookmarks ?? []).forEach((b) => allowedIds!.add(b.question_id));
     }
 
-    if (allowedIds.size === 0) return { error: "NOT_ENOUGH_QUESTIONS" };
+    if (modes.includes("srs")) {
+      const [dueRes, allRes] = await Promise.all([
+        supabase
+          .from("question_srs_stats")
+          .select("question_id")
+          .eq("user_id", user.id)
+          .lte("next_review_at", new Date().toISOString()),
+        supabase
+          .from("question_srs_stats")
+          .select("question_id")
+          .eq("user_id", user.id),
+      ]);
+      srsScheduledIds = new Set((allRes.data ?? []).map((s) => s.question_id));
+      (dueRes.data ?? []).forEach((s) => allowedIds!.add(s.question_id));
+      // Never-reviewed questions are added after topic questions are fetched below
+    }
+
+    if (allowedIds.size === 0 && !srsScheduledIds) return { error: "NOT_ENOUGH_QUESTIONS" };
   }
 
   let questionsQuery = supabase
@@ -85,6 +104,13 @@ export async function startPracticeSession(
   const { data: rawQuestions } = await questionsQuery.limit(
     isNewMode ? PRACTICE_SESSION_QUESTION_COUNT * 2 : 50
   );
+
+  // For SRS mode: also include questions never seen before (not in srs stats)
+  if (srsScheduledIds !== null) {
+    (rawQuestions ?? []).forEach((q) => {
+      if (!srsScheduledIds!.has(q.id)) allowedIds!.add(q.id);
+    });
+  }
 
   const questions = allowedIds
     ? (rawQuestions ?? []).filter((q) => allowedIds!.has(q.id))
@@ -248,7 +274,7 @@ export async function completePracticeSession(sessionId: string) {
 
   const { data: session } = await supabase
     .from("exam_sessions")
-    .select("id, status, total_questions, topic_id, session_answers(is_correct)")
+    .select("id, status, total_questions, topic_id, session_answers(question_id, is_correct)")
     .eq("id", sessionId)
     .eq("user_id", user.id)
     .single();
@@ -256,7 +282,7 @@ export async function completePracticeSession(sessionId: string) {
   if (!session || session.status !== "in_progress") return;
 
   const answers = (
-    session.session_answers as { is_correct: boolean | null }[]
+    session.session_answers as { question_id: string; is_correct: boolean | null }[]
   ) ?? [];
   const correctCount = answers.filter((a) => a.is_correct === true).length;
 
@@ -349,6 +375,33 @@ export async function completePracticeSession(sessionId: string) {
         streak_freeze_month: currentMonth,
       })
       .eq("id", user.id);
+  }
+
+  // Update SRS stats for all answered questions
+  if (answers.length > 0) {
+    const qIds = answers.map((a) => a.question_id);
+    const { data: existingStats } = await supabase
+      .from("question_srs_stats")
+      .select("question_id, interval_days, ease_factor, repetitions")
+      .eq("user_id", user.id)
+      .in("question_id", qIds);
+
+    const statsMap = new Map(
+      (existingStats ?? []).map((s) => [s.question_id, s])
+    );
+
+    const srsUpdates = answers.map((a) => ({
+      user_id: user.id,
+      question_id: a.question_id,
+      ...applySmTwo(
+        statsMap.get(a.question_id) ?? { interval_days: 1, ease_factor: 2.5, repetitions: 0 },
+        a.is_correct ?? false
+      ),
+    }));
+
+    await supabase
+      .from("question_srs_stats")
+      .upsert(srsUpdates, { onConflict: "user_id,question_id" });
   }
 
   after(() => triggerSessionNotifications(user.id));

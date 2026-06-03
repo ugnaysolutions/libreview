@@ -132,7 +132,7 @@ export const UNIVERSITY_EXAM_MAP: Partial<Record<string, ExamType>> = {
 };
 
 export const PRACTICE_SESSION_QUESTION_COUNT = 10;
-export type QuestionSetMode = "random" | "new" | "wrong" | "bookmarked";
+export type QuestionSetMode = "random" | "new" | "wrong" | "bookmarked" | "srs";
 export const TIMED_PRACTICE_SECONDS_PER_QUESTION = 60;
 
 export const FREE_PLAN = {

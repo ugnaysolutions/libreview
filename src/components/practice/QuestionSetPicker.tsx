@@ -1,6 +1,6 @@
 "use client";
 
-import { Shuffle, Sparkles, RotateCcw, Bookmark } from "lucide-react";
+import { Shuffle, Sparkles, RotateCcw, Bookmark, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { QuestionSetMode } from "@/lib/constants";
 
@@ -16,12 +16,14 @@ const ALL_MODES: ModeOption[] = [
   { id: "new",        label: "New",           icon: Sparkles,   desc: "Recently added" },
   { id: "wrong",      label: "Review Wrong",  icon: RotateCcw,  desc: "Past incorrect answers" },
   { id: "bookmarked", label: "Bookmarked",    icon: Bookmark,   desc: "Your saved questions" },
+  { id: "srs",        label: "Review Due",    icon: Clock,      desc: "Spaced repetition queue" },
 ];
 
 interface Props {
   modes: QuestionSetMode[];
   onToggle: (mode: QuestionSetMode) => void;
   bookmarkedCount?: number;
+  dueCount?: number;
   includeNew?: boolean;
   errorModes?: QuestionSetMode[];
 }
@@ -30,6 +32,7 @@ export function QuestionSetPicker({
   modes,
   onToggle,
   bookmarkedCount,
+  dueCount,
   includeNew = true,
   errorModes = [],
 }: Props) {
@@ -44,8 +47,16 @@ export function QuestionSetPicker({
         {visibleModes.map(({ id, label, icon: Icon, desc }) => {
           const isSelected = modes.includes(id);
           const isBookmarked = id === "bookmarked";
-          const isEmpty = isBookmarked && bookmarkedCount !== undefined && bookmarkedCount === 0;
+          const isSrs = id === "srs";
+          const isEmpty =
+            (isBookmarked && bookmarkedCount !== undefined && bookmarkedCount === 0) ||
+            (isSrs && dueCount !== undefined && dueCount === 0);
           const hasError = (errorModes ?? []).includes(id);
+          const badge = isBookmarked && bookmarkedCount !== undefined && bookmarkedCount > 0
+            ? bookmarkedCount
+            : isSrs && dueCount !== undefined && dueCount > 0
+            ? dueCount
+            : null;
 
           return (
             <button
@@ -86,14 +97,14 @@ export function QuestionSetPicker({
                   >
                     {label}
                   </p>
-                  {isBookmarked && bookmarkedCount !== undefined && bookmarkedCount > 0 && (
+                  {badge !== null && (
                     <span className="text-[10px] font-medium bg-primary/10 text-primary rounded-full px-1.5 py-0">
-                      {bookmarkedCount}
+                      {badge}
                     </span>
                   )}
                 </div>
                 <p className={cn("text-[10px] mt-0.5", hasError ? "text-red-500" : "text-muted-foreground")}>
-                  {hasError ? "Not enough questions" : isEmpty ? "None saved" : desc}
+                  {hasError ? "Not enough questions" : isEmpty ? (isBookmarked ? "None saved" : "None due") : desc}
                 </p>
               </div>
             </button>
