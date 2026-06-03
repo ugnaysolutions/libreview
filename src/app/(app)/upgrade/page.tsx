@@ -11,17 +11,17 @@ import { cn } from "@/lib/utils";
 
 const premiumFeatures = [
   "Unlimited practice sessions per day",
-  "10,000+ exam questions",
   "Unlimited mock exams per day",
-  "Full wrong-answer review with explanations",
+  "Full explanations for every question",
   "ACET, DCAT & USTET mock exams",
   "Reasoning subject (Logic, Numerical, Verbal & more)",
-  "Advanced progress analytics",
   "Adaptive weak-topic drills",
-  "Timed practice mode",
-  "Study planner",
+  "Score predictor — see your estimated exam score",
+  "Percentile ranking — compare your performance with other students",
+  "Full leaderboard access — weekly top 10 mock exam rankings",
+  "Custom question sets — review wrong answers or bookmarked questions",
+  "Up to 500 bookmarks (free: 20)",
   "Streak freeze (3/month)",
-  "Performance benchmarking",
 ];
 
 export default async function UpgradePage() {
@@ -94,7 +94,8 @@ export default async function UpgradePage() {
             {FREE_PLAN.dailyMockLimit} mock exam / day
           </p>
           <p className="text-muted-foreground">UPCAT only</p>
-          <p className="text-muted-foreground">Score summary only</p>
+          <p className="text-muted-foreground">Explanations for first 3 Qs</p>
+          <p className="text-muted-foreground">20 bookmarks</p>
         </div>
         <div className="rounded-2xl border-2 border-primary p-4 space-y-1">
           <p className="font-semibold text-primary flex items-center gap-1">
@@ -102,8 +103,9 @@ export default async function UpgradePage() {
           </p>
           <p className="text-foreground">Unlimited sessions</p>
           <p className="text-foreground">Unlimited mock exams</p>
-          <p className="text-foreground">4 exam types</p>
-          <p className="text-foreground">Full review</p>
+          <p className="text-foreground">5 exam types</p>
+          <p className="text-foreground">Full explanations + score predictor</p>
+          <p className="text-foreground">500 bookmarks</p>
         </div>
       </div>
 
