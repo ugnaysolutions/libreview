@@ -18,6 +18,10 @@ import {
   Zap,
   Target,
   Trophy,
+  CalendarDays,
+  FilePlus,
+  Award,
+  GraduationCap,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,7 +74,7 @@ export default async function DashboardPage() {
   weekStart.setDate(weekStart.getDate() - daysFromMonday);
   weekStart.setHours(0, 0, 0, 0);
 
-  const [profileRes, subtestsRes, progressRes, sessionsRes, premium, dailyCompletionRes, examTargetsRes, weeklySessionsRes] = await Promise.all(
+  const [profileRes, subtestsRes, progressRes, sessionsRes, premium, dailyCompletionRes, examTargetsRes, weeklySessionsRes, upcomingMilestonesRes] = await Promise.all(
     [
       supabase
         .from("user_profiles")
@@ -113,6 +117,13 @@ export default async function DashboardPage() {
         .eq("user_id", user.id)
         .eq("status", "completed")
         .gte("completed_at", weekStart.toISOString()),
+      supabase
+        .from("exam_schedules")
+        .select("id, milestone_type, milestone_label, scheduled_date, academic_year, notes, is_confirmed, source_url, exam_configs!inner(name, slug, color, is_active)")
+        .eq("exam_configs.is_active", true)
+        .gte("scheduled_date", today)
+        .order("scheduled_date", { ascending: true })
+        .limit(3),
     ]
   );
 
@@ -123,6 +134,7 @@ export default async function DashboardPage() {
   const dailyCompletion = dailyCompletionRes.data ?? null;
   const examTargets = examTargetsRes.data ?? [];
   const weeklyGoal = (profile as unknown as { weekly_goal: number | null })?.weekly_goal ?? null;
+  const upcomingMilestones = upcomingMilestonesRes.data ?? [];
   const weeklySessionsDone = weeklySessionsRes.count ?? 0;
 
   if (!profile) redirect("/onboarding");
@@ -379,6 +391,67 @@ export default async function DashboardPage() {
         targets={examTargets}
         legacyExamDate={examTargets.length === 0 ? profile.target_exam_date : null}
       />
+
+      {/* ── Upcoming Milestones ──────────────────────────────────── */}
+      {upcomingMilestones.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold text-foreground">Upcoming Milestones</span>
+            </div>
+            <Link
+              href="/schedule"
+              className="text-xs text-primary font-medium hover:underline"
+            >
+              View all →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {upcomingMilestones.map((m) => {
+              const exam = m.exam_configs as unknown as { name: string; slug: string; color: string };
+              const MilestoneIcon =
+                m.milestone_type === "application_open" ? FilePlus
+                : m.milestone_type === "application_deadline" ? Clock
+                : m.milestone_type === "results_release" ? Award
+                : m.milestone_type === "enrollment" ? GraduationCap
+                : ClipboardList;
+              const daysUntil = Math.round(
+                (new Date(m.scheduled_date + "T00:00:00").getTime() - new Date().setHours(0,0,0,0)) / 86400000
+              );
+              return (
+                <Link key={m.id} href="/schedule">
+                  <Card className="rounded-2xl border-border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div
+                        className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: exam.color + "18" }}
+                      >
+                        <MilestoneIcon className="h-4 w-4" style={{ color: exam.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate">{m.milestone_label}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {exam.name} · {new Date(m.scheduled_date + "T00:00:00").toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
+                        </p>
+                      </div>
+                      <span
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                        style={{
+                          backgroundColor: exam.color + "18",
+                          color: exam.color,
+                        }}
+                      >
+                        {daysUntil === 0 ? "Today" : `In ${daysUntil}d`}
+                      </span>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Daily Challenge ─────────────────────────────────────── */}
       {dailyCompletion ? (

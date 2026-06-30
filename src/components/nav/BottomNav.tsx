@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap, Sparkles } from "lucide-react";
+import { Home, BookOpen, ClipboardList, PlayCircle, BarChart2, LogOut, Zap, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/app/actions/auth";
 import { NotificationBell, type Notification } from "@/components/nav/NotificationBell";
@@ -91,6 +91,18 @@ export function BottomNav({ user, isPremium, unreadCount, notifications }: Botto
               Sign out
             </button>
           </form>
+          <Link
+              href="/schedule"
+              aria-label="Exam Schedule"
+              className={cn(
+                "flex items-center justify-center transition-colors",
+                pathname === "/schedule" || pathname.startsWith("/schedule/")
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <CalendarDays className="h-5 w-5" />
+            </Link>
           <NotificationBell unreadCount={unreadCount} notifications={notifications} direction="up" align="right" />
         </div>
       </div>
