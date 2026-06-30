@@ -24,6 +24,8 @@ const MILESTONE_LABELS: Record<string, string> = {
   enrollment: "Enrollment",
 };
 
+type DatePrecision = "exact" | "month" | "year";
+
 interface Milestone {
   id: string;
   exam_config_id: string;
@@ -32,6 +34,7 @@ interface Milestone {
   scheduled_date: string;
   date_end: string | null;
   extra_dates: string[] | null;
+  date_precision: DatePrecision;
   academic_year: string;
   notes: string | null;
   is_confirmed: boolean;
@@ -50,21 +53,25 @@ interface Props {
   milestones: Milestone[];
 }
 
-function formatDate(iso: string) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+function formatDate(iso: string, precision: DatePrecision) {
+  if (precision === "year") return String(new Date(iso + "T00:00:00").getFullYear());
+  if (precision === "month")
+    return new Date(iso + "T00:00:00").toLocaleDateString("en-PH", { year: "numeric", month: "short" });
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" });
 }
 
-function formatDateDisplay(scheduled_date: string, date_end: string | null, extra_dates: string[] | null) {
-  if (date_end) return `${formatDate(scheduled_date)} – ${formatDate(date_end)}`;
+function formatDateDisplay(
+  scheduled_date: string,
+  date_end: string | null,
+  extra_dates: string[] | null,
+  date_precision: DatePrecision
+) {
+  if (date_end) return `${formatDate(scheduled_date, date_precision)} – ${formatDate(date_end, date_precision)}`;
   if (extra_dates?.length) {
-    const all = [scheduled_date, ...extra_dates].sort().map(formatDate);
+    const all = [scheduled_date, ...extra_dates].sort().map((d) => formatDate(d, date_precision));
     return all.join(", ");
   }
-  return formatDate(scheduled_date);
+  return formatDate(scheduled_date, date_precision);
 }
 
 export function MilestoneManager({ exam, milestones }: Props) {
@@ -139,6 +146,11 @@ export function MilestoneManager({ exam, milestones }: Props) {
                           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
                             {MILESTONE_LABELS[m.milestone_type] ?? m.milestone_type}
                           </span>
+                          {m.date_precision !== "exact" && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                              {m.date_precision === "month" ? "Month TBD" : "Year TBD"}
+                            </span>
+                          )}
                           {!m.is_confirmed && (
                             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">
                               Tentative
@@ -151,7 +163,7 @@ export function MilestoneManager({ exam, milestones }: Props) {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {formatDateDisplay(m.scheduled_date, m.date_end, m.extra_dates)} · {m.academic_year}
+                          {formatDateDisplay(m.scheduled_date, m.date_end, m.extra_dates, m.date_precision)} · {m.academic_year}
                         </p>
                         {m.notes && (
                           <p className="text-xs text-muted-foreground mt-0.5 italic">{m.notes}</p>

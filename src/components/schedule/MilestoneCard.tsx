@@ -12,6 +12,8 @@ const MILESTONE_ICONS: Record<string, React.ElementType> = {
   enrollment: GraduationCap,
 };
 
+export type DatePrecision = "exact" | "month" | "year";
+
 export interface MilestoneCardData {
   id: string;
   milestone_type: string;
@@ -19,6 +21,7 @@ export interface MilestoneCardData {
   scheduled_date: string;
   date_end: string | null;
   extra_dates: string[] | null;
+  date_precision: DatePrecision;
   academic_year: string;
   notes: string | null;
   is_confirmed: boolean;
@@ -30,52 +33,113 @@ export interface MilestoneCardData {
   };
 }
 
-type RelativeState =
-  | { kind: "upcoming"; days: number }
-  | { kind: "ongoing"; daysLeft: number }   // only for ranges
-  | { kind: "past"; daysAgo: number };
+// ── Relative state ────────────────────────────────────────────────────────────
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
+type RelativeState =
+  | { kind: "upcoming"; label: string }
+  | { kind: "ongoing"; label: string }
+  | { kind: "past"; label: string };
+
+const MS_PER_DAY = 86_400_000;
 
 function today0(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d;
 }
+function todayStr(): string {
+  return today0().toISOString().slice(0, 10);
+}
 
-function daysFrom(isoDate: string): number {
-  return Math.round((new Date(isoDate + "T00:00:00").getTime() - today0().getTime()) / MS_PER_DAY);
+function daysFrom(iso: string) {
+  return Math.round((new Date(iso + "T00:00:00").getTime() - today0().getTime()) / MS_PER_DAY);
+}
+function monthsFrom(iso: string) {
+  const t = today0();
+  const d = new Date(iso + "T00:00:00");
+  return (d.getFullYear() - t.getFullYear()) * 12 + (d.getMonth() - t.getMonth());
+}
+function yearsFrom(iso: string) {
+  return new Date(iso + "T00:00:00").getFullYear() - today0().getFullYear();
+}
+
+function upcomingLabel(iso: string, precision: DatePrecision): string {
+  if (precision === "year") {
+    const y = yearsFrom(iso);
+    return y <= 0 ? "This year" : `In ${y}yr`;
+  }
+  if (precision === "month") {
+    const mo = monthsFrom(iso);
+    if (mo < 0) return "This month";
+    if (mo === 0) return "This month";
+    return `In ~${mo}mo`;
+  }
+  const d = daysFrom(iso);
+  if (d === 0) return "Today";
+  return `In ${d}d`;
+}
+
+function pastLabel(iso: string, precision: DatePrecision): string {
+  if (precision === "year") {
+    const y = Math.abs(yearsFrom(iso));
+    return y === 0 ? "This year" : `${y}yr ago`;
+  }
+  if (precision === "month") {
+    const mo = Math.abs(monthsFrom(iso));
+    return mo === 0 ? "This month" : `${mo}mo ago`;
+  }
+  return `${Math.abs(daysFrom(iso))}d ago`;
+}
+
+function isPastDate(iso: string, precision: DatePrecision): boolean {
+  if (precision === "year") {
+    return new Date(iso + "T00:00:00").getFullYear() < today0().getFullYear();
+  }
+  if (precision === "month") {
+    return monthsFrom(iso) < 0;
+  }
+  return iso < todayStr();
 }
 
 function getRelativeState(
   scheduled_date: string,
   date_end: string | null,
-  extra_dates: string[] | null
+  extra_dates: string[] | null,
+  precision: DatePrecision
 ): RelativeState {
-  // Range mode
+  // Range
   if (date_end) {
-    const daysToEnd = daysFrom(date_end);
-    if (daysToEnd < 0) return { kind: "past", daysAgo: Math.abs(daysToEnd) };
-    if (daysFrom(scheduled_date) <= 0) return { kind: "ongoing", daysLeft: daysToEnd };
-    return { kind: "upcoming", days: daysFrom(scheduled_date) };
-  }
-
-  // Multiple discrete dates — find the nearest future date
-  if (extra_dates && extra_dates.length > 0) {
-    const all = [scheduled_date, ...extra_dates].sort();
-    const todayStr = today0().toISOString().slice(0, 10);
-    const future = all.filter((d) => d >= todayStr);
-    const past = all.filter((d) => d < todayStr);
-    if (future.length === 0) {
-      return { kind: "past", daysAgo: Math.abs(daysFrom(past[past.length - 1])) };
+    if (isPastDate(date_end, precision)) {
+      return { kind: "past", label: pastLabel(date_end, precision) };
     }
-    return { kind: "upcoming", days: daysFrom(future[0]) };
+    if (isPastDate(scheduled_date, precision)) {
+      // started → ongoing
+      const endLabel = precision === "year"
+        ? `ends ${yearsFrom(date_end) === 0 ? "this year" : "in " + yearsFrom(date_end) + "yr"}`
+        : precision === "month"
+        ? `${Math.abs(monthsFrom(date_end))}mo left`
+        : `${Math.abs(daysFrom(date_end))}d left`;
+      return { kind: "ongoing", label: endLabel };
+    }
+    return { kind: "upcoming", label: upcomingLabel(scheduled_date, precision) };
   }
 
-  // Single date
-  const d = daysFrom(scheduled_date);
-  if (d < 0) return { kind: "past", daysAgo: Math.abs(d) };
-  return { kind: "upcoming", days: d };
+  // Multiple discrete dates — nearest future wins
+  if (extra_dates?.length) {
+    const all = [scheduled_date, ...extra_dates].sort();
+    const ts = todayStr();
+    const future = all.filter((d) => !isPastDate(d, precision));
+    if (future.length === 0) {
+      return { kind: "past", label: pastLabel(all[all.length - 1], precision) };
+    }
+    return { kind: "upcoming", label: upcomingLabel(future[0], precision) };
+  }
+
+  // Single
+  if (isPastDate(scheduled_date, precision)) {
+    return { kind: "past", label: pastLabel(scheduled_date, precision) };
+  }
+  return { kind: "upcoming", label: upcomingLabel(scheduled_date, precision) };
 }
 
 // ── Date display helpers ──────────────────────────────────────────────────────
@@ -84,30 +148,76 @@ function fmt(iso: string, opts: Intl.DateTimeFormatOptions) {
   return new Date(iso + "T00:00:00").toLocaleDateString("en-PH", opts);
 }
 
-function formatSingle(iso: string) {
+function displayDate(iso: string, precision: DatePrecision): string {
+  if (precision === "year") return String(new Date(iso + "T00:00:00").getFullYear());
+  if (precision === "month") return fmt(iso, { year: "numeric", month: "long" });
   return fmt(iso, { year: "numeric", month: "long", day: "numeric" });
 }
 
-function formatRange(start: string, end: string) {
+function displayDateShort(iso: string, precision: DatePrecision): string {
+  if (precision === "year") return String(new Date(iso + "T00:00:00").getFullYear());
+  if (precision === "month") return fmt(iso, { year: "numeric", month: "short" });
+  return fmt(iso, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function formatRange(start: string, end: string, precision: DatePrecision): string {
+  if (precision === "year") {
+    const sy = new Date(start + "T00:00:00").getFullYear();
+    const ey = new Date(end + "T00:00:00").getFullYear();
+    return sy === ey ? String(sy) : `${sy} – ${ey}`;
+  }
+  if (precision === "month") {
+    const s = new Date(start + "T00:00:00");
+    const e = new Date(end + "T00:00:00");
+    if (s.getFullYear() === e.getFullYear()) {
+      return `${fmt(start, { month: "long" })} – ${fmt(end, { month: "long", year: "numeric" })}`;
+    }
+    return `${displayDate(start, "month")} – ${displayDate(end, "month")}`;
+  }
+  // Exact range (original logic)
   const s = new Date(start + "T00:00:00");
   const e = new Date(end + "T00:00:00");
   if (s.getFullYear() !== e.getFullYear()) {
-    // Different year: "Dec 1, 2025 – Jan 15, 2026"
-    return `${fmt(start, { month: "short", day: "numeric", year: "numeric" })} – ${fmt(end, { month: "short", day: "numeric", year: "numeric" })}`;
+    return `${displayDateShort(start, "exact")} – ${displayDateShort(end, "exact")}`;
   }
   if (s.getMonth() !== e.getMonth()) {
-    // Same year, different month: "June 1 – August 31, 2025"
     return `${fmt(start, { month: "long", day: "numeric" })} – ${fmt(end, { month: "long", day: "numeric", year: "numeric" })}`;
   }
-  // Same month: "September 14–21, 2025"
   return `${fmt(start, { month: "long", day: "numeric" })}–${e.getDate()}, ${s.getFullYear()}`;
 }
 
-function formatMultiple(dates: string[]) {
+function formatMultiple(dates: string[], precision: DatePrecision): string {
   const sorted = [...dates].sort();
-  if (sorted.length === 1) return formatSingle(sorted[0]);
+  if (sorted.length === 1) return displayDate(sorted[0], precision);
 
-  // Group by year+month
+  if (precision === "year") {
+    const years = sorted.map((d) => new Date(d + "T00:00:00").getFullYear());
+    const unique = [...new Set(years)];
+    return unique.length === 1 ? String(unique[0])
+      : unique.slice(0, -1).join(", ") + " & " + unique[unique.length - 1];
+  }
+
+  if (precision === "month") {
+    // Group by year, list months
+    const byYear = new Map<number, string[]>();
+    for (const d of sorted) {
+      const dt = new Date(d + "T00:00:00");
+      const yr = dt.getFullYear();
+      const mo = dt.toLocaleDateString("en-PH", { month: "long" });
+      const arr = byYear.get(yr) ?? [];
+      if (!arr.includes(mo)) arr.push(mo);
+      byYear.set(yr, arr);
+    }
+    return [...byYear.entries()]
+      .map(([yr, months]) => {
+        const joined = months.length === 1 ? months[0]
+          : months.slice(0, -1).join(", ") + " & " + months[months.length - 1];
+        return `${joined} ${yr}`;
+      })
+      .join(" · ");
+  }
+
+  // Exact: group by year+month
   type Group = { year: number; month: number; days: number[] };
   const groups: Group[] = [];
   for (const iso of sorted) {
@@ -116,22 +226,16 @@ function formatMultiple(dates: string[]) {
     if (g) g.days.push(d.getDate());
     else groups.push({ year: d.getFullYear(), month: d.getMonth(), days: [d.getDate()] });
   }
-
-  const parts = groups.map((g, gi) => {
+  return groups.map((g, gi) => {
     const monthName = new Date(g.year, g.month, 1).toLocaleDateString("en-PH", { month: "long" });
-    const dayList = g.days.map((d, i) => {
-      if (i < g.days.length - 1) return String(d);
-      // Last day in this group: include year if last group
-      return gi === groups.length - 1 ? `${d}, ${g.year}` : String(d);
-    });
-    const dayStr =
-      dayList.length === 1
-        ? dayList[0]
-        : `${dayList.slice(0, -1).join(", ")} & ${dayList[dayList.length - 1]}`;
+    const dayList = g.days.map((d, i) =>
+      i === g.days.length - 1 && gi === groups.length - 1
+        ? `${d}, ${g.year}` : String(d)
+    );
+    const dayStr = dayList.length === 1 ? dayList[0]
+      : dayList.slice(0, -1).join(", ") + " & " + dayList[dayList.length - 1];
     return `${monthName} ${dayStr}`;
-  });
-
-  return parts.join(" · ");
+  }).join(" · ");
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -143,42 +247,34 @@ interface Props {
 
 export function MilestoneCard({ milestone, compact = false }: Props) {
   const [state, setState] = useState<RelativeState | null>(null);
+  const { date_precision: precision } = milestone;
 
   useEffect(() => {
-    setState(getRelativeState(milestone.scheduled_date, milestone.date_end, milestone.extra_dates));
-  }, [milestone.scheduled_date, milestone.date_end, milestone.extra_dates]);
+    setState(getRelativeState(
+      milestone.scheduled_date, milestone.date_end,
+      milestone.extra_dates, precision
+    ));
+  }, [milestone.scheduled_date, milestone.date_end, milestone.extra_dates, precision]);
 
   const Icon = MILESTONE_ICONS[milestone.milestone_type] ?? ClipboardList;
   const { color, name: examName } = milestone.exam_configs;
-
   const isPast = state?.kind === "past";
   const isOngoing = state?.kind === "ongoing";
-  const hasRange = !!milestone.date_end;
-  const hasMultiple = !hasRange && !!milestone.extra_dates?.length;
 
-  // Date display
-  const dateDisplay = hasRange
-    ? formatRange(milestone.scheduled_date, milestone.date_end!)
-    : hasMultiple
-    ? formatMultiple([milestone.scheduled_date, ...milestone.extra_dates!])
-    : formatSingle(milestone.scheduled_date);
-
-  // Pill
-  function pillContent() {
-    if (!state) return null;
-    if (state.kind === "past") return `${state.daysAgo}d ago`;
-    if (state.kind === "ongoing") return state.daysLeft === 0 ? "Ends today" : `${state.daysLeft}d left`;
-    if (state.days === 0) return "Today";
-    return `In ${state.days}d`;
-  }
+  const dateDisplay = milestone.date_end
+    ? formatRange(milestone.scheduled_date, milestone.date_end, precision)
+    : milestone.extra_dates?.length
+    ? formatMultiple([milestone.scheduled_date, ...milestone.extra_dates], precision)
+    : displayDate(milestone.scheduled_date, precision);
 
   function pillColors() {
-    if (!state) return "bg-muted text-muted-foreground";
-    if (state.kind === "past") return "bg-muted text-muted-foreground";
+    if (!state || state.kind === "past") return "bg-muted text-muted-foreground";
     if (state.kind === "ongoing") return "bg-green-50 text-green-700";
-    const { days } = state;
-    if (days <= 7) return "bg-red-50 text-red-600";
-    if (days <= 30) return "bg-amber-50 text-amber-600";
+    const label = state.label;
+    if (label.includes("Today") || label.includes("This month") || label.includes("This year"))
+      return "bg-red-50 text-red-600";
+    if (label.startsWith("In 1") || label.match(/^In [1-2]\d?d/)) return "bg-red-50 text-red-600";
+    if (label.match(/^In [1-3]\d?d|^In ~[1-2]mo/)) return "bg-amber-50 text-amber-600";
     return "bg-primary/10 text-primary";
   }
 
@@ -224,6 +320,11 @@ export function MilestoneCard({ milestone, compact = false }: Props) {
                     Ongoing
                   </span>
                 )}
+                {precision !== "exact" && (
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                    {precision === "month" ? "Month TBD" : "Year TBD"}
+                  </span>
+                )}
                 {!milestone.is_confirmed && (
                   <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
                     Tentative
@@ -247,7 +348,7 @@ export function MilestoneCard({ milestone, compact = false }: Props) {
             <div className="flex flex-col items-end gap-1 shrink-0">
               {state !== null && (
                 <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap", pillColors())}>
-                  {pillContent()}
+                  {state.label}
                 </span>
               )}
               {!compact && milestone.source_url && (

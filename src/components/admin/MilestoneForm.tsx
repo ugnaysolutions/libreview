@@ -17,6 +17,7 @@ const MILESTONE_TYPES = [
 ];
 
 type DateMode = "single" | "range" | "multiple";
+type DatePrecision = "exact" | "month" | "year";
 
 interface Milestone {
   id: string;
@@ -26,6 +27,7 @@ interface Milestone {
   scheduled_date: string;
   date_end: string | null;
   extra_dates: string[] | null;
+  date_precision: DatePrecision;
   academic_year: string;
   notes: string | null;
   is_confirmed: boolean;
@@ -46,10 +48,23 @@ function detectInitialMode(milestone?: Milestone): DateMode {
   return "single";
 }
 
+// Convert a stored DATE ("YYYY-MM-01") to "YYYY-MM" for <input type="month">
+function toMonthInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  return iso.slice(0, 7);
+}
+
+// Convert a stored DATE to year string for <input type="number">
+function toYearInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  return String(new Date(iso + "T00:00:00").getFullYear());
+}
+
 export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [dateMode, setDateMode] = useState<DateMode>(detectInitialMode(milestone));
+  const [datePrecision, setDatePrecision] = useState<DatePrecision>(milestone?.date_precision ?? "exact");
   // Extra dates for "multiple" mode (does not include scheduled_date itself)
   const [extraDates, setExtraDates] = useState<string[]>(
     milestone?.extra_dates ?? [""]
@@ -65,21 +80,46 @@ export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Pr
     setExtraDates((d) => d.map((v, idx) => (idx === i ? val : v)));
   }
 
+  // Convert raw input → ISO date string based on precision
+  function toISO(raw: string): string {
+    if (!raw) return "";
+    if (datePrecision === "month") return raw + "-01";        // "2027-05" → "2027-05-01"
+    if (datePrecision === "year") return raw + "-01-01";      // "2027" → "2027-01-01"
+    return raw;
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    const fd = new FormData(e.currentTarget);
+    const formEl = e.currentTarget;
+    const fd = new FormData(formEl);
     fd.set("exam_config_id", examConfigId);
     fd.set("exam_slug", examSlug);
+    fd.set("date_precision", datePrecision);
 
-    // Clear fields that don't apply to the current mode
-    if (dateMode !== "range") fd.set("date_end", "");
-    if (dateMode !== "multiple") {
+    // Normalise dates from precision-specific inputs
+    const rawScheduled = (fd.get("scheduled_date_raw") as string) || "";
+    fd.set("scheduled_date", toISO(rawScheduled));
+    fd.delete("scheduled_date_raw");
+
+    if (dateMode === "range") {
+      const rawEnd = (fd.get("date_end_raw") as string) || "";
+      fd.set("date_end", toISO(rawEnd));
+      fd.delete("date_end_raw");
       fd.delete("extra_dates");
-    } else {
-      // extra_dates[] inputs are already in FormData from the inputs;
-      // strip the range field just in case
+    } else if (dateMode === "multiple") {
       fd.set("date_end", "");
+      fd.delete("date_end_raw");
+      // extra_dates_raw[] → normalise each
+      const rawExtras = fd.getAll("extra_dates_raw") as string[];
+      fd.delete("extra_dates_raw");
+      fd.delete("extra_dates");
+      rawExtras.filter(Boolean).forEach((d) => fd.append("extra_dates", toISO(d)));
+    } else {
+      fd.set("date_end", "");
+      fd.delete("date_end_raw");
+      fd.delete("extra_dates");
+      fd.delete("extra_dates_raw");
     }
 
     const result = await upsertMilestone(fd);
@@ -102,6 +142,52 @@ export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Pr
         ? "bg-card text-foreground shadow-sm"
         : "text-muted-foreground hover:text-foreground"
     );
+
+  // Render the right input type for a date field based on precision
+  function DateInput({
+    name,
+    defaultValue,
+    required = true,
+  }: {
+    name: string;
+    defaultValue?: string | null;
+    required?: boolean;
+  }) {
+    if (datePrecision === "year") {
+      return (
+        <input
+          type="number"
+          name={name}
+          required={required}
+          defaultValue={defaultValue ? toYearInput(defaultValue) : ""}
+          min={2020}
+          max={2035}
+          placeholder="e.g. 2027"
+          className={inputCls}
+        />
+      );
+    }
+    if (datePrecision === "month") {
+      return (
+        <input
+          type="month"
+          name={name}
+          required={required}
+          defaultValue={defaultValue ? toMonthInput(defaultValue) : ""}
+          className={inputCls}
+        />
+      );
+    }
+    return (
+      <input
+        type="date"
+        name={name}
+        required={required}
+        defaultValue={defaultValue ?? ""}
+        className={inputCls}
+      />
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -134,34 +220,57 @@ export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Pr
         </div>
       </div>
 
-      {/* Date mode toggle */}
+      {/* Date precision toggle */}
       <div className="space-y-3">
-        <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/40 p-1">
-          {(["single", "range", "multiple"] as DateMode[]).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => setDateMode(mode)}
-              className={modeBtnCls(dateMode === mode)}
-            >
-              {mode === "single" ? "Single date"
-                : mode === "range" ? "Date range"
-                : "Multiple dates"}
-            </button>
-          ))}
+        <div>
+          <p className={labelCls}>Date precision</p>
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/40 p-1">
+            {(["exact", "month", "year"] as DatePrecision[]).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setDatePrecision(p)}
+                className={modeBtnCls(datePrecision === p)}
+              >
+                {p === "exact" ? "Exact date" : p === "month" ? "Month only" : "Year only"}
+              </button>
+            ))}
+          </div>
+          {datePrecision !== "exact" && (
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {datePrecision === "month"
+                ? "Use when only the month is known (e.g. May 2027)."
+                : "Use when only the year is known (e.g. 2027)."}
+            </p>
+          )}
+        </div>
+
+        {/* Date mode toggle */}
+        <div>
+          <p className={labelCls}>Date type</p>
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/40 p-1">
+            {(["single", "range", "multiple"] as DateMode[]).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setDateMode(mode)}
+                className={modeBtnCls(dateMode === mode)}
+              >
+                {mode === "single" ? "Single"
+                  : mode === "range" ? "Range"
+                  : "Multiple"}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Single */}
         {dateMode === "single" && (
           <div>
-            <label className={labelCls}>Date *</label>
-            <input
-              type="date"
-              name="scheduled_date"
-              required
-              defaultValue={milestone?.scheduled_date ?? ""}
-              className={inputCls}
-            />
+            <label className={labelCls}>
+              {datePrecision === "year" ? "Year *" : datePrecision === "month" ? "Month *" : "Date *"}
+            </label>
+            <DateInput name="scheduled_date_raw" defaultValue={milestone?.scheduled_date} />
           </div>
         )}
 
@@ -169,24 +278,16 @@ export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Pr
         {dateMode === "range" && (
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Start Date *</label>
-              <input
-                type="date"
-                name="scheduled_date"
-                required
-                defaultValue={milestone?.scheduled_date ?? ""}
-                className={inputCls}
-              />
+              <label className={labelCls}>
+                {datePrecision === "year" ? "From Year *" : datePrecision === "month" ? "From Month *" : "Start Date *"}
+              </label>
+              <DateInput name="scheduled_date_raw" defaultValue={milestone?.scheduled_date} />
             </div>
             <div>
-              <label className={labelCls}>End Date *</label>
-              <input
-                type="date"
-                name="date_end"
-                required
-                defaultValue={milestone?.date_end ?? ""}
-                className={inputCls}
-              />
+              <label className={labelCls}>
+                {datePrecision === "year" ? "To Year *" : datePrecision === "month" ? "To Month *" : "End Date *"}
+              </label>
+              <DateInput name="date_end_raw" defaultValue={milestone?.date_end} />
             </div>
           </div>
         )}
@@ -194,30 +295,54 @@ export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Pr
         {/* Multiple discrete dates */}
         {dateMode === "multiple" && (
           <div className="space-y-2">
-            <label className={labelCls}>Dates * (each date is a separate option, e.g. different batches)</label>
-            {/* First date = scheduled_date */}
+            <label className={labelCls}>
+              {datePrecision === "year" ? "Years *" : datePrecision === "month" ? "Months *" : "Dates *"}
+              {" "}(each entry is a separate option, e.g. different batches)
+            </label>
+            {/* First = scheduled_date */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground w-12 shrink-0">Date 1</span>
-              <input
-                type="date"
-                name="scheduled_date"
-                required
-                defaultValue={milestone?.scheduled_date ?? ""}
-                className={inputCls}
-              />
+              <span className="text-xs text-muted-foreground w-12 shrink-0">
+                {datePrecision === "year" ? "Year 1" : datePrecision === "month" ? "Month 1" : "Date 1"}
+              </span>
+              <DateInput name="scheduled_date_raw" defaultValue={milestone?.scheduled_date} />
             </div>
-            {/* Extra dates */}
+            {/* Extra */}
             {extraDates.map((val, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground w-12 shrink-0">Date {i + 2}</span>
-                <input
-                  type="date"
-                  name="extra_dates"
-                  required
-                  value={val}
-                  onChange={(e) => updateExtraDate(i, e.target.value)}
-                  className={inputCls}
-                />
+                <span className="text-xs text-muted-foreground w-12 shrink-0">
+                  {datePrecision === "year" ? `Year ${i + 2}` : datePrecision === "month" ? `Month ${i + 2}` : `Date ${i + 2}`}
+                </span>
+                {datePrecision === "year" ? (
+                  <input
+                    type="number"
+                    name="extra_dates_raw"
+                    required
+                    min={2020}
+                    max={2035}
+                    value={val ? toYearInput(val) : ""}
+                    onChange={(e) => updateExtraDate(i, e.target.value)}
+                    placeholder="e.g. 2027"
+                    className={inputCls}
+                  />
+                ) : datePrecision === "month" ? (
+                  <input
+                    type="month"
+                    name="extra_dates_raw"
+                    required
+                    value={val ? toMonthInput(val) : ""}
+                    onChange={(e) => updateExtraDate(i, e.target.value)}
+                    className={inputCls}
+                  />
+                ) : (
+                  <input
+                    type="date"
+                    name="extra_dates_raw"
+                    required
+                    value={val}
+                    onChange={(e) => updateExtraDate(i, e.target.value)}
+                    className={inputCls}
+                  />
+                )}
                 {extraDates.length > 1 && (
                   <button
                     type="button"
@@ -235,7 +360,7 @@ export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Pr
               className="flex items-center gap-1.5 text-xs text-primary font-medium hover:underline mt-1"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add another date
+              Add another
             </button>
           </div>
         )}

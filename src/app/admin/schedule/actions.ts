@@ -104,6 +104,7 @@ export async function upsertMilestone(formData: FormData): Promise<ActionResult>
       scheduled_date: formData.get("scheduled_date") as string,
       date_end: rawDateEnd || null,
       extra_dates: rawExtraDates.length > 0 ? rawExtraDates : null,
+      date_precision: (formData.get("date_precision") as string) || "exact",
       academic_year: (formData.get("academic_year") as string).trim(),
       notes: ((formData.get("notes") as string) || "").trim() || null,
       is_confirmed: formData.get("is_confirmed") === "true",
