@@ -18,6 +18,7 @@ export interface MilestoneCardData {
   milestone_label: string;
   scheduled_date: string;
   date_end: string | null;
+  extra_dates: string[] | null;
   academic_year: string;
   notes: string | null;
   is_confirmed: boolean;
@@ -31,56 +32,109 @@ export interface MilestoneCardData {
 
 type RelativeState =
   | { kind: "upcoming"; days: number }
-  | { kind: "ongoing"; daysLeft: number }
+  | { kind: "ongoing"; daysLeft: number }   // only for ranges
   | { kind: "past"; daysAgo: number };
 
-function getRelativeState(scheduled_date: string, date_end: string | null): RelativeState {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const start = new Date(scheduled_date + "T00:00:00");
-  const end = date_end ? new Date(date_end + "T00:00:00") : null;
-  const msPerDay = 1000 * 60 * 60 * 24;
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-  const daysToStart = Math.round((start.getTime() - today.getTime()) / msPerDay);
+function today0(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
-  if (end) {
-    const daysToEnd = Math.round((end.getTime() - today.getTime()) / msPerDay);
+function daysFrom(isoDate: string): number {
+  return Math.round((new Date(isoDate + "T00:00:00").getTime() - today0().getTime()) / MS_PER_DAY);
+}
+
+function getRelativeState(
+  scheduled_date: string,
+  date_end: string | null,
+  extra_dates: string[] | null
+): RelativeState {
+  // Range mode
+  if (date_end) {
+    const daysToEnd = daysFrom(date_end);
     if (daysToEnd < 0) return { kind: "past", daysAgo: Math.abs(daysToEnd) };
-    if (daysToStart <= 0) return { kind: "ongoing", daysLeft: daysToEnd };
-    return { kind: "upcoming", days: daysToStart };
+    if (daysFrom(scheduled_date) <= 0) return { kind: "ongoing", daysLeft: daysToEnd };
+    return { kind: "upcoming", days: daysFrom(scheduled_date) };
   }
 
-  if (daysToStart < 0) return { kind: "past", daysAgo: Math.abs(daysToStart) };
-  return { kind: "upcoming", days: daysToStart };
+  // Multiple discrete dates — find the nearest future date
+  if (extra_dates && extra_dates.length > 0) {
+    const all = [scheduled_date, ...extra_dates].sort();
+    const todayStr = today0().toISOString().slice(0, 10);
+    const future = all.filter((d) => d >= todayStr);
+    const past = all.filter((d) => d < todayStr);
+    if (future.length === 0) {
+      return { kind: "past", daysAgo: Math.abs(daysFrom(past[past.length - 1])) };
+    }
+    return { kind: "upcoming", days: daysFrom(future[0]) };
+  }
+
+  // Single date
+  const d = daysFrom(scheduled_date);
+  if (d < 0) return { kind: "past", daysAgo: Math.abs(d) };
+  return { kind: "upcoming", days: d };
 }
 
-function formatDate(iso: string) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+// ── Date display helpers ──────────────────────────────────────────────────────
+
+function fmt(iso: string, opts: Intl.DateTimeFormatOptions) {
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-PH", opts);
 }
 
-function formatDateShort(iso: string) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-PH", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+function formatSingle(iso: string) {
+  return fmt(iso, { year: "numeric", month: "long", day: "numeric" });
 }
 
-function formatDateRange(start: string, end: string): string {
+function formatRange(start: string, end: string) {
   const s = new Date(start + "T00:00:00");
   const e = new Date(end + "T00:00:00");
-  const sameYear = s.getFullYear() === e.getFullYear();
-  if (sameYear) {
-    const startStr = s.toLocaleDateString("en-PH", { month: "long", day: "numeric" });
-    const endStr = e.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" });
-    return `${startStr} – ${endStr}`;
+  if (s.getFullYear() !== e.getFullYear()) {
+    // Different year: "Dec 1, 2025 – Jan 15, 2026"
+    return `${fmt(start, { month: "short", day: "numeric", year: "numeric" })} – ${fmt(end, { month: "short", day: "numeric", year: "numeric" })}`;
   }
-  return `${formatDateShort(start)} – ${formatDateShort(end)}`;
+  if (s.getMonth() !== e.getMonth()) {
+    // Same year, different month: "June 1 – August 31, 2025"
+    return `${fmt(start, { month: "long", day: "numeric" })} – ${fmt(end, { month: "long", day: "numeric", year: "numeric" })}`;
+  }
+  // Same month: "September 14–21, 2025"
+  return `${fmt(start, { month: "long", day: "numeric" })}–${e.getDate()}, ${s.getFullYear()}`;
 }
+
+function formatMultiple(dates: string[]) {
+  const sorted = [...dates].sort();
+  if (sorted.length === 1) return formatSingle(sorted[0]);
+
+  // Group by year+month
+  type Group = { year: number; month: number; days: number[] };
+  const groups: Group[] = [];
+  for (const iso of sorted) {
+    const d = new Date(iso + "T00:00:00");
+    const g = groups.find((g) => g.year === d.getFullYear() && g.month === d.getMonth());
+    if (g) g.days.push(d.getDate());
+    else groups.push({ year: d.getFullYear(), month: d.getMonth(), days: [d.getDate()] });
+  }
+
+  const parts = groups.map((g, gi) => {
+    const monthName = new Date(g.year, g.month, 1).toLocaleDateString("en-PH", { month: "long" });
+    const dayList = g.days.map((d, i) => {
+      if (i < g.days.length - 1) return String(d);
+      // Last day in this group: include year if last group
+      return gi === groups.length - 1 ? `${d}, ${g.year}` : String(d);
+    });
+    const dayStr =
+      dayList.length === 1
+        ? dayList[0]
+        : `${dayList.slice(0, -1).join(", ")} & ${dayList[dayList.length - 1]}`;
+    return `${monthName} ${dayStr}`;
+  });
+
+  return parts.join(" · ");
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 interface Props {
   milestone: MilestoneCardData;
@@ -91,15 +145,25 @@ export function MilestoneCard({ milestone, compact = false }: Props) {
   const [state, setState] = useState<RelativeState | null>(null);
 
   useEffect(() => {
-    setState(getRelativeState(milestone.scheduled_date, milestone.date_end));
-  }, [milestone.scheduled_date, milestone.date_end]);
+    setState(getRelativeState(milestone.scheduled_date, milestone.date_end, milestone.extra_dates));
+  }, [milestone.scheduled_date, milestone.date_end, milestone.extra_dates]);
 
   const Icon = MILESTONE_ICONS[milestone.milestone_type] ?? ClipboardList;
   const { color, name: examName } = milestone.exam_configs;
+
   const isPast = state?.kind === "past";
   const isOngoing = state?.kind === "ongoing";
   const hasRange = !!milestone.date_end;
+  const hasMultiple = !hasRange && !!milestone.extra_dates?.length;
 
+  // Date display
+  const dateDisplay = hasRange
+    ? formatRange(milestone.scheduled_date, milestone.date_end!)
+    : hasMultiple
+    ? formatMultiple([milestone.scheduled_date, ...milestone.extra_dates!])
+    : formatSingle(milestone.scheduled_date);
+
+  // Pill
   function pillContent() {
     if (!state) return null;
     if (state.kind === "past") return `${state.daysAgo}d ago`;
@@ -118,10 +182,6 @@ export function MilestoneCard({ milestone, compact = false }: Props) {
     return "bg-primary/10 text-primary";
   }
 
-  const dateDisplay = hasRange
-    ? formatDateRange(milestone.scheduled_date, milestone.date_end!)
-    : formatDate(milestone.scheduled_date);
-
   return (
     <div
       className={cn(
@@ -129,14 +189,12 @@ export function MilestoneCard({ milestone, compact = false }: Props) {
         isPast && "opacity-60"
       )}
     >
-      {/* Left color bar */}
       <div
         className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
         style={{ backgroundColor: color }}
       />
 
       <div className={cn("flex items-start gap-4 pl-5", compact ? "p-3 pl-5" : "p-4 pl-5")}>
-        {/* Icon */}
         <div
           className={cn(
             "rounded-xl flex items-center justify-center shrink-0",
@@ -147,7 +205,6 @@ export function MilestoneCard({ milestone, compact = false }: Props) {
           <Icon className={cn(compact ? "h-4 w-4" : "h-5 w-5")} style={{ color }} />
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -187,7 +244,6 @@ export function MilestoneCard({ milestone, compact = false }: Props) {
               )}
             </div>
 
-            {/* Pill + source link */}
             <div className="flex flex-col items-end gap-1 shrink-0">
               {state !== null && (
                 <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap", pillColors())}>

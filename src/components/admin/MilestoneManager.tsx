@@ -31,6 +31,7 @@ interface Milestone {
   milestone_label: string;
   scheduled_date: string;
   date_end: string | null;
+  extra_dates: string[] | null;
   academic_year: string;
   notes: string | null;
   is_confirmed: boolean;
@@ -57,9 +58,13 @@ function formatDate(iso: string) {
   });
 }
 
-function formatDateDisplay(scheduled_date: string, date_end: string | null) {
-  if (!date_end) return formatDate(scheduled_date);
-  return `${formatDate(scheduled_date)} – ${formatDate(date_end)}`;
+function formatDateDisplay(scheduled_date: string, date_end: string | null, extra_dates: string[] | null) {
+  if (date_end) return `${formatDate(scheduled_date)} – ${formatDate(date_end)}`;
+  if (extra_dates?.length) {
+    const all = [scheduled_date, ...extra_dates].sort().map(formatDate);
+    return all.join(", ");
+  }
+  return formatDate(scheduled_date);
 }
 
 export function MilestoneManager({ exam, milestones }: Props) {
@@ -146,7 +151,7 @@ export function MilestoneManager({ exam, milestones }: Props) {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {formatDateDisplay(m.scheduled_date, m.date_end)} · {m.academic_year}
+                          {formatDateDisplay(m.scheduled_date, m.date_end, m.extra_dates)} · {m.academic_year}
                         </p>
                         {m.notes && (
                           <p className="text-xs text-muted-foreground mt-0.5 italic">{m.notes}</p>

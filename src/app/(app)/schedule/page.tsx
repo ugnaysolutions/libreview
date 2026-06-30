@@ -17,7 +17,7 @@ export default async function SchedulePage() {
     supabase
       .from("exam_schedules")
       .select(
-        "id, milestone_type, milestone_label, scheduled_date, date_end, academic_year, notes, is_confirmed, source_url, exam_configs!inner(name, slug, color, is_active)"
+        "id, milestone_type, milestone_label, scheduled_date, date_end, extra_dates, academic_year, notes, is_confirmed, source_url, exam_configs!inner(name, slug, color, is_active)"
       )
       .order("scheduled_date", { ascending: true }),
   ]);

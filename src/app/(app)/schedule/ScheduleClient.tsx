@@ -30,10 +30,14 @@ export function ScheduleClient({ milestones, examConfigs, today }: Props) {
     ? milestones
     : milestones.filter((m) => m.exam_configs.slug === filter);
 
-  // A milestone is "active/upcoming" if it hasn't fully ended yet.
-  // For ranges: active until date_end passes. For single dates: active until scheduled_date passes.
-  const upcoming = filtered.filter((m) => (m.date_end ?? m.scheduled_date) >= today);
-  const past = filtered.filter((m) => (m.date_end ?? m.scheduled_date) < today).reverse();
+  // A milestone is "upcoming/active" until its last relevant date has passed.
+  function effectiveEnd(m: MilestoneCardData): string {
+    if (m.date_end) return m.date_end;
+    if (m.extra_dates?.length) return [...m.extra_dates].sort().pop()!;
+    return m.scheduled_date;
+  }
+  const upcoming = filtered.filter((m) => effectiveEnd(m) >= today);
+  const past = filtered.filter((m) => effectiveEnd(m) < today).reverse();
 
   return (
     <div className="space-y-5">

@@ -22,7 +22,7 @@ export default async function AdminExamMilestonesPage({
 
   const { data: milestones } = await supabase
     .from("exam_schedules")
-    .select("id, exam_config_id, milestone_type, milestone_label, scheduled_date, date_end, academic_year, notes, is_confirmed, source_url")
+    .select("id, exam_config_id, milestone_type, milestone_label, scheduled_date, date_end, extra_dates, academic_year, notes, is_confirmed, source_url")
     .eq("exam_config_id", exam.id)
     .order("scheduled_date", { ascending: true });
 

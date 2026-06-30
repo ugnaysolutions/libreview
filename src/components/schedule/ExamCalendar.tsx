@@ -41,14 +41,15 @@ export function ExamCalendar({ milestones }: Props) {
     return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   }
 
-  // For each day in this month, gather which milestones are relevant:
-  //   - single date milestone: scheduled_date == day
-  //   - range milestone: scheduled_date <= day <= date_end
-  // We collect dot colors and full milestone lists per day.
+  // For each day, gather milestones that are relevant:
+  //   - single date: scheduled_date == day
+  //   - range: scheduled_date <= day <= date_end
+  //   - multiple discrete: scheduled_date == day OR day in extra_dates
   function getMilestonesForDay(ds: string): MilestoneCardData[] {
     return milestones.filter((m) => {
-      if (!m.date_end) return m.scheduled_date === ds;
-      return m.scheduled_date <= ds && ds <= m.date_end;
+      if (m.date_end) return m.scheduled_date <= ds && ds <= m.date_end;
+      if (m.extra_dates?.length) return m.scheduled_date === ds || m.extra_dates.includes(ds);
+      return m.scheduled_date === ds;
     });
   }
 
@@ -69,9 +70,10 @@ export function ExamCalendar({ milestones }: Props) {
   for (const m of milestones) {
     const monthStart = dateStr(1);
     const monthEnd = dateStr(daysInMonth);
+    const allDates = [m.scheduled_date, ...(m.extra_dates ?? [])];
     const touches = m.date_end
       ? m.scheduled_date <= monthEnd && m.date_end >= monthStart
-      : m.scheduled_date >= monthStart && m.scheduled_date <= monthEnd;
+      : allDates.some((d) => d >= monthStart && d <= monthEnd);
     if (touches) legendExams.set(m.exam_configs.slug, m.exam_configs);
   }
 
