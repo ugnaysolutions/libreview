@@ -93,11 +93,13 @@ export async function upsertMilestone(formData: FormData): Promise<ActionResult>
     const supabase = await requireAdmin();
     const id = formData.get("id") as string | null;
 
+    const rawDateEnd = ((formData.get("date_end") as string) || "").trim();
     const payload = {
       exam_config_id: formData.get("exam_config_id") as string,
       milestone_type: formData.get("milestone_type") as string,
       milestone_label: (formData.get("milestone_label") as string).trim(),
       scheduled_date: formData.get("scheduled_date") as string,
+      date_end: rawDateEnd || null,
       academic_year: (formData.get("academic_year") as string).trim(),
       notes: ((formData.get("notes") as string) || "").trim() || null,
       is_confirmed: formData.get("is_confirmed") === "true",

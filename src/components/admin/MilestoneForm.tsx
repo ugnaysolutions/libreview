@@ -22,6 +22,7 @@ interface Milestone {
   milestone_type: string;
   milestone_label: string;
   scheduled_date: string;
+  date_end: string | null;
   academic_year: string;
   notes: string | null;
   is_confirmed: boolean;
@@ -38,6 +39,7 @@ interface Props {
 export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [hasRange, setHasRange] = useState(!!milestone?.date_end);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,6 +47,8 @@ export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Pr
     const fd = new FormData(e.currentTarget);
     fd.set("exam_config_id", examConfigId);
     fd.set("exam_slug", examSlug);
+    // Clear date_end if range toggle was disabled
+    if (!hasRange) fd.set("date_end", "");
     const result = await upsertMilestone(fd);
     setLoading(false);
     if (result.success) {
@@ -79,15 +83,49 @@ export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Pr
             name="milestone_label"
             required
             defaultValue={milestone?.milestone_label ?? ""}
-            placeholder="e.g. Application Opens"
+            placeholder="e.g. Application Period"
             className={inputCls}
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className={labelCls}>Date *</label>
+      {/* Date row — single date or date range */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className={labelCls.replace("mb-1", "")}>Date *</span>
+          <button
+            type="button"
+            onClick={() => setHasRange((r) => !r)}
+            className="text-xs text-primary font-medium hover:underline"
+          >
+            {hasRange ? "Use single date" : "Add end date (range)"}
+          </button>
+        </div>
+
+        {hasRange ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Start Date *</label>
+              <input
+                type="date"
+                name="scheduled_date"
+                required
+                defaultValue={milestone?.scheduled_date ?? ""}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>End Date *</label>
+              <input
+                type="date"
+                name="date_end"
+                required={hasRange}
+                defaultValue={milestone?.date_end ?? ""}
+                className={inputCls}
+              />
+            </div>
+          </div>
+        ) : (
           <input
             type="date"
             name="scheduled_date"
@@ -95,17 +133,18 @@ export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Pr
             defaultValue={milestone?.scheduled_date ?? ""}
             className={inputCls}
           />
-        </div>
-        <div>
-          <label className={labelCls}>Academic Year *</label>
-          <input
-            name="academic_year"
-            required
-            defaultValue={milestone?.academic_year ?? "AY 2026-2027"}
-            placeholder="AY 2026-2027"
-            className={inputCls}
-          />
-        </div>
+        )}
+      </div>
+
+      <div>
+        <label className={labelCls}>Academic Year *</label>
+        <input
+          name="academic_year"
+          required
+          defaultValue={milestone?.academic_year ?? "AY 2026-2027"}
+          placeholder="AY 2026-2027"
+          className={inputCls}
+        />
       </div>
 
       <div>
@@ -114,7 +153,7 @@ export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Pr
           name="notes"
           rows={2}
           defaultValue={milestone?.notes ?? ""}
-          placeholder="Optional clarification (e.g. 'Batch 1 only')"
+          placeholder="Optional clarification (e.g. 'Batch 1 only', 'Online application only')"
           className={cn(inputCls, "resize-none")}
         />
       </div>
@@ -141,7 +180,7 @@ export function MilestoneForm({ examConfigId, examSlug, milestone, onClose }: Pr
         />
         <input type="hidden" name="is_confirmed" value="false" />
         <label htmlFor="is_confirmed" className="text-sm text-foreground">
-          Date confirmed (uncheck if tentative)
+          Date(s) confirmed (uncheck if tentative)
         </label>
       </div>
 

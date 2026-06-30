@@ -19,16 +19,8 @@ const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 export function ExamCalendar({ milestones }: Props) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth()); // 0-indexed
+  const [month, setMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-  // Build a map: "YYYY-MM-DD" → MilestoneCardData[]
-  const byDate = new Map<string, MilestoneCardData[]>();
-  for (const m of milestones) {
-    const list = byDate.get(m.scheduled_date) ?? [];
-    list.push(m);
-    byDate.set(m.scheduled_date, list);
-  }
 
   function prevMonth() {
     if (month === 0) { setMonth(11); setYear(y => y - 1); }
@@ -41,31 +33,46 @@ export function ExamCalendar({ milestones }: Props) {
     setSelectedDate(null);
   }
 
-  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayStr = today.toISOString().slice(0, 10);
-
-  const cells: (number | null)[] = [
-    ...Array(firstDay).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-
-  // Pad to complete last row
-  while (cells.length % 7 !== 0) cells.push(null);
 
   function dateStr(day: number) {
     return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   }
 
-  const selectedMilestones = selectedDate ? (byDate.get(selectedDate) ?? []) : [];
+  // For each day in this month, gather which milestones are relevant:
+  //   - single date milestone: scheduled_date == day
+  //   - range milestone: scheduled_date <= day <= date_end
+  // We collect dot colors and full milestone lists per day.
+  function getMilestonesForDay(ds: string): MilestoneCardData[] {
+    return milestones.filter((m) => {
+      if (!m.date_end) return m.scheduled_date === ds;
+      return m.scheduled_date <= ds && ds <= m.date_end;
+    });
+  }
 
-  // Unique exam colors for legend (from milestones in current month)
+  // Build per-day dot colors (deduplicated by exam slug)
+  // We compute lazily in render, but pre-compute the "has any" check per day for performance.
+  // For range milestones that span across months we still want to mark days in this month.
+
+  const cells: (number | null)[] = [
+    ...Array(firstDay).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const selectedMilestones = selectedDate ? getMilestonesForDay(selectedDate) : [];
+
+  // Legend: exams that have any milestone touching this month
   const legendExams = new Map<string, { name: string; color: string }>();
   for (const m of milestones) {
-    const [y, mo] = m.scheduled_date.split("-").map(Number);
-    if (y === year && mo - 1 === month) {
-      legendExams.set(m.exam_configs.slug, m.exam_configs);
-    }
+    const monthStart = dateStr(1);
+    const monthEnd = dateStr(daysInMonth);
+    const touches = m.date_end
+      ? m.scheduled_date <= monthEnd && m.date_end >= monthStart
+      : m.scheduled_date >= monthStart && m.scheduled_date <= monthEnd;
+    if (touches) legendExams.set(m.exam_configs.slug, m.exam_configs);
   }
 
   return (
@@ -108,25 +115,40 @@ export function ExamCalendar({ milestones }: Props) {
           }
 
           const ds = dateStr(day);
-          const hasMilestones = byDate.has(ds);
+          const dayMilestones = getMilestonesForDay(ds);
+          const hasMilestones = dayMilestones.length > 0;
           const isToday = ds === todayStr;
           const isSelected = ds === selectedDate;
           const isPast = ds < todayStr;
-          const dots = hasMilestones ? byDate.get(ds)! : [];
 
-          // Deduplicate exam colors for dots
-          const dotColors = [...new Map(dots.map(m => [m.exam_configs.slug, m.exam_configs.color])).values()];
+          // Deduplicated dot colors for this day
+          const dotColors = [...new Map(
+            dayMilestones.map(m => [m.exam_configs.slug, m.exam_configs.color])
+          ).values()];
+
+          // Detect range milestones: mark if day is strictly between start and end (not start/end themselves)
+          const isInsideRange = dayMilestones.some(
+            m => m.date_end && m.scheduled_date < ds && ds < m.date_end
+          );
+          const isRangeStart = dayMilestones.some(
+            m => m.date_end && m.scheduled_date === ds
+          );
+          const isRangeEnd = dayMilestones.some(
+            m => m.date_end && m.date_end === ds
+          );
 
           return (
             <button
               key={ds}
-              onClick={() => setSelectedDate(isSelected ? null : ds)}
+              onClick={() => hasMilestones ? setSelectedDate(isSelected ? null : ds) : undefined}
               className={cn(
-                "bg-card min-h-[52px] flex flex-col items-center py-2 px-1 gap-1 transition-colors focus:outline-none",
+                "bg-card min-h-[52px] flex flex-col items-center py-2 px-1 gap-1 transition-colors focus:outline-none relative",
                 isSelected && "bg-primary/10",
                 !isSelected && hasMilestones && "hover:bg-muted/60",
-                !isSelected && !hasMilestones && "hover:bg-muted/30 cursor-default",
-                isPast && !hasMilestones && "opacity-40"
+                !isSelected && !hasMilestones && "cursor-default",
+                isPast && !hasMilestones && "opacity-40",
+                // Subtle background tint for days inside an active range
+                isInsideRange && !isSelected && "bg-primary/5"
               )}
               disabled={!hasMilestones}
             >
@@ -135,7 +157,9 @@ export function ExamCalendar({ milestones }: Props) {
                   "text-xs font-medium leading-none h-5 w-5 flex items-center justify-center rounded-full",
                   isToday && "bg-primary text-white font-bold",
                   !isToday && isPast && "text-muted-foreground",
-                  !isToday && !isPast && "text-foreground"
+                  !isToday && !isPast && "text-foreground",
+                  // Range boundary indicators
+                  (isRangeStart || isRangeEnd) && !isToday && "ring-1 ring-current ring-offset-0"
                 )}
               >
                 {day}
@@ -158,7 +182,7 @@ export function ExamCalendar({ milestones }: Props) {
 
       {/* Legend */}
       {legendExams.size > 0 && (
-        <div className="flex flex-wrap gap-2 pt-1">
+        <div className="flex flex-wrap gap-3 pt-1">
           {[...legendExams.values()].map((e) => (
             <span key={e.name} className="flex items-center gap-1 text-xs text-muted-foreground">
               <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: e.color }} />
@@ -172,7 +196,9 @@ export function ExamCalendar({ milestones }: Props) {
       {selectedDate && selectedMilestones.length > 0 && (
         <div className="space-y-2 pt-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric" })}
+            {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-PH", {
+              weekday: "long", month: "long", day: "numeric",
+            })}
           </p>
           {selectedMilestones.map((m) => (
             <MilestoneCard key={m.id} milestone={m} />

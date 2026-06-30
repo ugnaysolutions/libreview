@@ -119,9 +119,9 @@ export default async function DashboardPage() {
         .gte("completed_at", weekStart.toISOString()),
       supabase
         .from("exam_schedules")
-        .select("id, milestone_type, milestone_label, scheduled_date, academic_year, notes, is_confirmed, source_url, exam_configs!inner(name, slug, color, is_active)")
+        .select("id, milestone_type, milestone_label, scheduled_date, date_end, academic_year, notes, is_confirmed, source_url, exam_configs!inner(name, slug, color, is_active)")
         .eq("exam_configs.is_active", true)
-        .gte("scheduled_date", today)
+        .or(`scheduled_date.gte.${today},date_end.gte.${today}`)
         .order("scheduled_date", { ascending: true })
         .limit(3),
     ]

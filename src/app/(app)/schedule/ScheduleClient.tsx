@@ -30,8 +30,10 @@ export function ScheduleClient({ milestones, examConfigs, today }: Props) {
     ? milestones
     : milestones.filter((m) => m.exam_configs.slug === filter);
 
-  const upcoming = filtered.filter((m) => m.scheduled_date >= today);
-  const past = filtered.filter((m) => m.scheduled_date < today).reverse();
+  // A milestone is "active/upcoming" if it hasn't fully ended yet.
+  // For ranges: active until date_end passes. For single dates: active until scheduled_date passes.
+  const upcoming = filtered.filter((m) => (m.date_end ?? m.scheduled_date) >= today);
+  const past = filtered.filter((m) => (m.date_end ?? m.scheduled_date) < today).reverse();
 
   return (
     <div className="space-y-5">

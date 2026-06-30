@@ -30,6 +30,7 @@ interface Milestone {
   milestone_type: string;
   milestone_label: string;
   scheduled_date: string;
+  date_end: string | null;
   academic_year: string;
   notes: string | null;
   is_confirmed: boolean;
@@ -51,9 +52,14 @@ interface Props {
 function formatDate(iso: string) {
   return new Date(iso + "T00:00:00").toLocaleDateString("en-PH", {
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
   });
+}
+
+function formatDateDisplay(scheduled_date: string, date_end: string | null) {
+  if (!date_end) return formatDate(scheduled_date);
+  return `${formatDate(scheduled_date)} – ${formatDate(date_end)}`;
 }
 
 export function MilestoneManager({ exam, milestones }: Props) {
@@ -140,7 +146,7 @@ export function MilestoneManager({ exam, milestones }: Props) {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {formatDate(m.scheduled_date)} · {m.academic_year}
+                          {formatDateDisplay(m.scheduled_date, m.date_end)} · {m.academic_year}
                         </p>
                         {m.notes && (
                           <p className="text-xs text-muted-foreground mt-0.5 italic">{m.notes}</p>
